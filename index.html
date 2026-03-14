@@ -199,6 +199,24 @@ function App(){
       return ibSGD-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
     return ibSGD+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
 
+  /* Balance in account's own currency (no FX conversion) — for per-card display */
+  const aBalLocal=uc(acc=>{if(!acc)return 0;const ib=parseFloat(acc.initialBalance)||0;
+    const tx=S.transactions.filter(t=>t.accountId===acc.id);
+    /* For local balance, only count transactions in the account's currency */
+    const cur=acc.currency||"SGD";
+    if(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax"){
+      return ib-tx.reduce((s,t)=>{const a=parseFloat(t.amount)||0;const tc=t.currency||"SGD";
+        /* Convert other-currency payments to this currency for balance */
+        const amt=tc===cur?a:a*(FX[tc]||1)/(FX[cur]||1);
+        if(t.type==="payment"||t.type==="debt_payment")return s+amt;
+        if(t.type==="expense")return s-amt;return s},0)}
+    return ib+tx.reduce((s,t)=>{const a=parseFloat(t.amount)||0;const tc=t.currency||"SGD";
+      const amt=tc===cur?a:a*(FX[tc]||1)/(FX[cur]||1);
+      if(t.type==="income")return s+amt;
+      if(t.type==="expense")return s-amt;
+      if(t.type==="transfer_in")return s+amt;
+      if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-amt;return s},0)},[S.transactions]);
+
   /* Multi-currency balance breakdown per account */
   const aBalByCur=uc(acc=>{if(!acc)return{};const tx=S.transactions.filter(t=>t.accountId===acc.id);
     const m={};
@@ -375,25 +393,26 @@ function App(){
       // Credit Cards
       ccAccs.length>0&&e("div",{style:{marginBottom:16}},
         ccAccs.map(acc=>{
-          const bal=Math.abs(aBal(acc)),mp=calcMin(bal,acc.apr||0),mi=bal*(acc.apr||0)/100/12;
-          const paid=debtPmtsThisMonth(acc.id);
+          const bal=Math.abs(aBalLocal(acc)),cur=acc.currency||"SGD",mp=calcMin(bal,acc.apr||0),mi=bal*(acc.apr||0)/100/12;
+          const paid=Math.abs(S.transactions.filter(t=>(t.type==="payment"||t.type==="debt_payment")&&t.accountId===acc.id&&t.date?.slice(0,7)===vm).reduce((s,t)=>{const a=parseFloat(t.amount)||0;const tc=t.currency||"SGD";return s+(tc===cur?a:a*(FX[tc]||1)/(FX[cur]||1))},0));
           const pm=mp>0?calcPay(bal,acc.apr,mp):null;
           const dblAmt=Math.round(mp*2*100)/100;
           const pa=mp>0?calcPay(bal,acc.apr,dblAmt):null;
           const cpAmt=parseFloat(customPay[acc.id])||0;
           const pc=cpAmt>0?calcPay(bal,acc.apr,cpAmt):null;
+          const balSGD=Math.abs(aBal(acc));
           return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
             // Header
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
               e("div",null,e("div",{style:{fontSize:16,fontWeight:800}},acc.name),e("div",{style:{fontSize:11,color:"#888"}},"APR "+acc.apr+"% · Stmt day "+acc.stmtDay+" · Due day "+acc.dueDay)),
-              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,acc.currency),acc.creditLimit>0&&e("div",{style:{fontSize:10,color:"#999",fontFamily:"'Nunito',sans-serif"}},"of "+fm(acc.creditLimit,acc.currency)+" limit"))),
+              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,cur),acc.creditLimit>0&&e("div",{style:{fontSize:10,color:"#999",fontFamily:"'Nunito',sans-serif"}},"of "+fm(parseFloat(acc.creditLimit)||0,cur)+" limit"),cur!=="SGD"&&e("div",{style:{fontSize:10,color:"#999",fontFamily:"'Nunito',sans-serif"}},"≈ "+fm(balSGD)))),
             acc.creditLimit>0&&e(PBar,{value:bal,max:acc.creditLimit,color:"var(--red)",h:6}),
 
             // Stats row
             e("div",{style:{display:"flex",gap:8,marginTop:12}},
-              e("div",{className:"stat-box",style:{background:"#FFF0EE",border:"1px solid #FFCDD2"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Monthly Int."),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--red)"}},fm(mi,acc.currency))),
-              e("div",{className:"stat-box",style:{background:"#FFF8E1",border:"1px solid #FFE082"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Min Payment"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--orange)"}},fm(mp,acc.currency))),
-              e("div",{className:"stat-box",style:{background:"#E8F5E9",border:"1px solid #A5D6A7"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em"}},"Paid This Mo"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--green)"}},fm(paid,acc.currency)))),
+              e("div",{className:"stat-box",style:{background:"#FFF0EE",border:"1px solid #FFCDD2"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Monthly Int."),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--red)"}},fm(mi,cur))),
+              e("div",{className:"stat-box",style:{background:"#FFF8E1",border:"1px solid #FFE082"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Min Payment"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--orange)"}},fm(mp,cur))),
+              e("div",{className:"stat-box",style:{background:"#E8F5E9",border:"1px solid #A5D6A7"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em"}},"Paid This Mo"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--green)"}},fm(paid,cur)))),
 
             // Payoff scenarios
             bal>0&&pm&&e("div",{style:{marginTop:12}},
@@ -402,16 +421,16 @@ function App(){
                 /* Min */
                 e("div",{style:{flex:"1 1 45%",minWidth:130,background:"#f8f9fb",borderRadius:12,padding:12,border:"1px solid #e8eaed",marginBottom:6}},
                   e("div",{style:{fontSize:11,fontWeight:800,color:"var(--orange)",marginBottom:2}},"Min Payment"),
-                  e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(mp,acc.currency)+"/mo"),
+                  e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(mp,cur)+"/mo"),
                   e("div",{className:"mono",style:{fontSize:26,fontWeight:700}},pm.m),e("div",{style:{fontSize:11,color:"#888"}},"months"),
-                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pm.ti,acc.currency))),
+                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pm.ti,cur))),
                 /* 2x */
                 pa&&e("div",{style:{flex:"1 1 45%",minWidth:130,background:"#f8f9fb",borderRadius:12,padding:12,border:"2px solid var(--teal)",marginBottom:6}},
                   e("div",{style:{fontSize:11,fontWeight:800,color:"var(--teal)",marginBottom:2}},"Double Up"),
-                  e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(dblAmt,acc.currency)+"/mo"),
+                  e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(dblAmt,cur)+"/mo"),
                   e("div",{className:"mono",style:{fontSize:26,fontWeight:700}},pa.m),e("div",{style:{fontSize:11,color:"#888"}},"months"),
-                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pa.ti,acc.currency)),
-                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pa.ti,acc.currency))),
+                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pa.ti,cur)),
+                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pa.ti,cur))),
                 /* Custom */
                 e("div",{style:{flex:"1 1 100%",background:"#EDE7F6",borderRadius:12,padding:12,border:"1px solid #D1C4E9"}},
                   e("div",{style:{fontSize:11,fontWeight:800,color:"var(--purple2)",marginBottom:6}},"🎯 My Plan"),
@@ -425,8 +444,8 @@ function App(){
                     e("div",{style:{display:"flex",alignItems:"baseline",gap:6}},
                       e("span",{className:"mono",style:{fontSize:26,fontWeight:700}},pc.m),
                       e("span",{style:{fontSize:11,color:"#888"}},"months")),
-                    e("div",{style:{fontSize:11,color:"var(--red)"}},"Interest: "+fm(pc.ti,acc.currency)),
-                    pm&&e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pc.ti,acc.currency)+" vs min")):
+                    e("div",{style:{fontSize:11,color:"var(--red)"}},"Interest: "+fm(pc.ti,cur)),
+                    pm&&e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pc.ti,cur)+" vs min")):
                   e("div",{style:{fontSize:11,color:"#bbb"}},"Enter your monthly target above")))),
 
             // Actions
@@ -438,16 +457,17 @@ function App(){
       // Loans
       loanAccs.length>0&&e("div",{style:{marginBottom:16}},
         loanAccs.map(acc=>{
-          const bal=Math.abs(aBal(acc)),mi=bal*(acc.apr||0)/100/12,prin=(acc.monthlyPayment||0)-mi;
+          const bal=Math.abs(aBalLocal(acc)),cur=acc.currency||"SGD",mi=bal*(acc.apr||0)/100/12,prin=(acc.monthlyPayment||0)-mi;
+          const balSGD=Math.abs(aBal(acc));
           const paid=debtPmtsThisMonth(acc.id);
           return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
               e("div",null,e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:20}},"🏠"),e("span",{style:{fontSize:16,fontWeight:800}},acc.name)),
-                e("div",{style:{fontSize:11,color:"#888"}},"Interest Rate "+acc.apr+"% · Due day "+acc.dueDay+" · Payment "+fm(acc.monthlyPayment||0,acc.currency))),
-              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,acc.currency))),
+                e("div",{style:{fontSize:11,color:"#888"}},"Interest Rate "+acc.apr+"% · Due day "+acc.dueDay+" · Payment "+fm(acc.monthlyPayment||0,cur))),
+              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,cur),cur!=="SGD"&&e("div",{style:{fontSize:10,color:"#999",fontFamily:"'Nunito',sans-serif"}},"≈ "+fm(balSGD)))),
             e("div",{style:{display:"flex",gap:12,marginTop:10,fontSize:12}},
-              e("span",null,"Monthly interest: ",e("span",{className:"mono",style:{color:"var(--red)",fontWeight:700}},fm(mi,acc.currency))),
-              e("span",null,"Principal: ",e("span",{className:"mono",style:{color:"var(--green)",fontWeight:700}},fm(Math.max(prin,0),acc.currency)))),
+              e("span",null,"Monthly interest: ",e("span",{className:"mono",style:{color:"var(--red)",fontWeight:700}},fm(mi,cur))),
+              e("span",null,"Principal: ",e("span",{className:"mono",style:{color:"var(--green)",fontWeight:700}},fm(Math.max(prin,0),cur)))),
             e("div",{style:{display:"flex",gap:6,marginTop:10}},
               e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openDebtPmt(acc)},"💰 Log Payment"),
               e("button",{className:"btn btn-s",style:{fontSize:13},onClick:()=>sSheet({t:"acc",d:{...acc}})},"Edit")))})),
@@ -455,11 +475,11 @@ function App(){
       // Tax
       taxAccs.length>0&&e("div",{style:{marginBottom:16}},
         taxAccs.map(acc=>{
-          const bal=Math.abs(aBal(acc));
+          const bal=Math.abs(aBalLocal(acc)),cur=acc.currency||"SGD",balSGD=Math.abs(aBal(acc));
           return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
               e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:20}},"🏛"),e("span",{style:{fontSize:16,fontWeight:800}},acc.name)),
-              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:bal>0?"var(--red)":"var(--green)"}},fm(bal,acc.currency))),
+              e("div",{style:{textAlign:"right"}},e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:bal>0?"var(--red)":"var(--green)"}},fm(bal,cur)),cur!=="SGD"&&e("div",{style:{fontSize:10,color:"#999"}},"≈ "+fm(balSGD)))),
             e("div",{style:{display:"flex",gap:6,marginTop:10}},
               e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openDebtPmt(acc)},"💰 Log Payment"),
               e("button",{className:"btn btn-s",style:{fontSize:13},onClick:()=>sSheet({t:"acc",d:{...acc}})},"Edit")))})),
@@ -524,7 +544,10 @@ function App(){
     /* ═══ ACCOUNT DETAIL ═══ */
     tab==="accounts"&&selAcc&&(()=>{
       const acc=gA(selAcc);if(!acc){sSelAcc(null);return null}
-      const rawBal=aBal(acc),bal=(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax")?Math.abs(rawBal):rawBal,at=AT.find(t=>t.v===acc.type)||AT[0];
+      const isDebt=acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax";
+      const rawLocal=aBalLocal(acc),bal=isDebt?Math.abs(rawLocal):rawLocal;
+      const balSGD=isDebt?Math.abs(aBal(acc)):aBal(acc);
+      const cur=acc.currency||"SGD",at=AT.find(t=>t.v===acc.type)||AT[0];
       const accTx=S.transactions.filter(t=>t.accountId===acc.id).sort((a,b)=>b.date.localeCompare(a.date));
       const isCC=acc.type==="credit_card",isL=acc.type==="loan";
       const mp=isCC?calcMin(bal,acc.apr):0,mi=(isCC||isL)?bal*((parseFloat(acc.apr)||0)/100/12):0;
@@ -543,8 +566,10 @@ function App(){
             e("div",null,
               e("div",{style:{fontSize:18,fontWeight:900}},acc.name),
               e("div",{style:{fontSize:12,opacity:.75}},(isCC?"APR "+(acc.apr||0)+"%":isL?"Interest Rate "+(acc.apr||0)+"%":"")+(isCC?" · Stmt day "+acc.stmtDay+" · Due day "+acc.dueDay:"")+(isL?" · Due day "+acc.dueDay:""))),
-            e("div",{className:"mono",style:{fontSize:24,fontWeight:700,textAlign:"right"}},((isCC||isL)&&bal>0?"-":"")+fm(bal,acc.currency))),
-          isCC&&acc.creditLimit>0&&e("div",{style:{marginTop:10}},e(PBar,{value:bal,max:acc.creditLimit||1,color:"rgba(255,255,255,.5)",h:6}),e("div",{style:{fontSize:10,opacity:.7,marginTop:3}},"of "+fm(acc.creditLimit,acc.currency)+" limit"))),
+            e("div",{style:{textAlign:"right"}},
+              e("div",{className:"mono",style:{fontSize:24,fontWeight:700}},((isCC||isL)&&bal>0?"-":"")+fm(bal,cur)),
+              cur!=="SGD"&&e("div",{style:{fontSize:10,opacity:.7}},"≈ "+fm(balSGD)))),
+          isCC&&acc.creditLimit>0&&e("div",{style:{marginTop:10}},e(PBar,{value:bal,max:acc.creditLimit||1,color:"rgba(255,255,255,.5)",h:6}),e("div",{style:{fontSize:10,opacity:.7,marginTop:3}},"of "+fm(acc.creditLimit,cur)+" limit"))),
 
         /* Multi-currency breakdown */
         (()=>{const bc=aBalByCur(acc);const curs=Object.keys(bc).filter(c=>Math.abs(bc[c])>0.01);
@@ -558,24 +583,24 @@ function App(){
 
         isCC&&bal>0&&e("div",null,
           e("div",{style:{display:"flex",gap:8,marginBottom:12}},
-            e("div",{className:"stat-box",style:{background:"#FFF0EE",border:"1px solid #FFCDD2"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Monthly Int."),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--red)"}},fm(mi,acc.currency))),
-            e("div",{className:"stat-box",style:{background:"#FFF8E1",border:"1px solid #FFE082"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Min Payment"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--orange)"}},fm(mp,acc.currency))),
-            e("div",{className:"stat-box",style:{background:"#E8F5E9",border:"1px solid #A5D6A7"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em"}},"Paid This Mo"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--green)"}},fm(paid,acc.currency)))),
+            e("div",{className:"stat-box",style:{background:"#FFF0EE",border:"1px solid #FFCDD2"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Monthly Int."),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--red)"}},fm(mi,cur))),
+            e("div",{className:"stat-box",style:{background:"#FFF8E1",border:"1px solid #FFE082"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Min Payment"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--orange)"}},fm(mp,cur))),
+            e("div",{className:"stat-box",style:{background:"#E8F5E9",border:"1px solid #A5D6A7"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em"}},"Paid This Mo"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--green)"}},fm(paid,cur)))),
 
           pm&&e("div",{className:"card",style:{marginBottom:12}},
             e("div",{className:"lbl",style:{marginBottom:10}},"Payoff Scenarios"),
             e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
               e("div",{style:{flex:"1 1 45%",minWidth:130,background:"#f8f9fb",borderRadius:12,padding:12,border:"1px solid #e8eaed",marginBottom:6}},
                 e("div",{style:{fontSize:11,fontWeight:800,color:"var(--orange)",marginBottom:2}},"Min Payment"),
-                e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(mp,acc.currency)+"/mo"),
+                e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(mp,cur)+"/mo"),
                 e("div",{className:"mono",style:{fontSize:26,fontWeight:700}},pm.m),e("div",{style:{fontSize:11,color:"#888"}},"months"),
-                e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pm.ti,acc.currency))),
+                e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pm.ti,cur))),
               pa&&e("div",{style:{flex:"1 1 45%",minWidth:130,background:"#f8f9fb",borderRadius:12,padding:12,border:"2px solid var(--teal)",marginBottom:6}},
                 e("div",{style:{fontSize:11,fontWeight:800,color:"var(--teal)",marginBottom:2}},"Double Up"),
-                e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(dblAmt,acc.currency)+"/mo"),
+                e("div",{style:{fontSize:10,color:"#999",marginBottom:4}},"Pay "+fm(dblAmt,cur)+"/mo"),
                 e("div",{className:"mono",style:{fontSize:26,fontWeight:700}},pa.m),e("div",{style:{fontSize:11,color:"#888"}},"months"),
-                e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pa.ti,acc.currency)),
-                e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pa.ti,acc.currency))),
+                e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Interest: "+fm(pa.ti,cur)),
+                e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pa.ti,cur))),
               e("div",{style:{flex:"1 1 100%",background:"#EDE7F6",borderRadius:12,padding:12,border:"1px solid #D1C4E9"}},
                 e("div",{style:{fontSize:11,fontWeight:800,color:"var(--purple2)",marginBottom:6}},"🎯 My Plan"),
                 e("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:6}},
@@ -588,8 +613,8 @@ function App(){
                   e("div",{style:{display:"flex",alignItems:"baseline",gap:6}},
                     e("span",{className:"mono",style:{fontSize:26,fontWeight:700}},pc.m),
                     e("span",{style:{fontSize:11,color:"#888"}},"months")),
-                  e("div",{style:{fontSize:11,color:"var(--red)"}},"Interest: "+fm(pc.ti,acc.currency)),
-                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pc.ti,acc.currency)+" vs min")):
+                  e("div",{style:{fontSize:11,color:"var(--red)"}},"Interest: "+fm(pc.ti,cur)),
+                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pc.ti,cur)+" vs min")):
                 e("div",{style:{fontSize:11,color:"#bbb"}},"Enter your monthly target above"))))),
 
         e("div",{style:{display:"flex",gap:6,marginBottom:12}},
