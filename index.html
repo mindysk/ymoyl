@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="YMOYL">
+<meta name="theme-color" content="#1B5E3B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Your Money or Your Life</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Overpass+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f5f8;--card:#fff;--border:#e8eaed;--text:#1a1a2e;--muted:#888;--light:#f0f2f5;--green:#1B5E3B;--green2:#2E7D52;--red:#E8453C;--orange:#F57C00;--purple:#541346;--purple2:#7E57C2;--blue:#2196F3;--teal:#26A69A}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{overscroll-behavior:none;font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text)}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield}
+.mono{font-family:'Overpass Mono',monospace}
+.fade{animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.04)}
+.lbl{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.inp{padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f8f9fb;color:var(--text);font-family:'Overpass Mono',monospace;font-size:14px;outline:none;width:100%}
+.sel{padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f8f9fb;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;outline:none;width:100%}
+.btn{padding:12px 20px;border-radius:12px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;transition:all .15s}
+.btn-p{background:var(--green);color:#fff}
+.btn-s{background:var(--light);color:#333}
+.btn-d{background:#fff;color:var(--red);border:1px solid var(--red)}
+.pill{padding:7px 16px;border-radius:20px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:600;font-size:13px;transition:all .2s;white-space:nowrap;background:var(--light);color:#555}
+.pill.on{font-weight:700;color:#fff;background:var(--green)}
+.toast-pop{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 24px;border-radius:99px;font-size:13px;font-weight:700;z-index:200;animation:fadeIn .25s ease}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #eee;display:flex;justify-content:space-around;padding:4px 0 env(safe-area-inset-bottom,8px);z-index:40}
+.nb{display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;cursor:pointer;padding:6px 2px;min-width:0;flex:1}
+.nb .ni{font-size:20px;transition:transform .15s}
+.nb .nl{font-size:9px;font-weight:700;color:var(--muted)}
+.nb.on .ni{transform:scale(1.12)}
+.nb.on .nl{color:var(--green)}
+.scrollx{display:flex;overflow-x:auto;gap:10px;padding-bottom:4px;scrollbar-width:none}
+.scrollx::-webkit-scrollbar{display:none}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(2px);z-index:99}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;padding:8px 0 24px;z-index:100;animation:slideUp .25s ease}
+.sheet-h{width:36px;height:4px;border-radius:2px;background:#ddd;margin:0 auto 12px}
+.sheet-t{padding:0 20px 14px;font-size:17px;font-weight:800}
+.sheet-b{padding:0 20px}
+.pbar{width:100%;border-radius:99px;overflow:hidden}
+.pbar-f{height:100%;border-radius:99px;transition:width .5s ease}
+.fab{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:var(--green);color:#fff;border:none;cursor:pointer;font-size:26px;font-weight:300;z-index:50;box-shadow:0 4px 14px rgba(27,94,59,.4);display:flex;align-items:center;justify-content:center}
+.debt-hero{background:linear-gradient(135deg,#541346,#7E3B6E);border-radius:16px;padding:24px;color:#fff;margin-bottom:12px}
+.stat-box{flex:1;border-radius:12px;padding:14px 10px;text-align:center}
+.acc-card{min-width:240px;border-radius:16px;padding:18px;color:#fff;cursor:pointer;transition:transform .15s;flex-shrink:0}
+.acc-card:active{transform:scale(.97)}
+#app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px;position:relative}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const e=React.createElement,{useState:us,useEffect:ue,useMemo:um,useCallback:uc}=React;
+
+/* ═══ CONSTANTS ═══ */
+const CUR={SGD:"S$",THB:"฿",USD:"$"},FX={SGD:1,THB:0.039,USD:1.34};
+const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const FL=["","Regret","Meh","Fine","Happy","Joyful"];
+const FC=["","#E8453C","#E8883C","#E8C93C","#4CAF50","#7E57C2"];
+const AT=[{v:"credit_card",l:"Credit Card",i:"💳",c:"#E8453C"},{v:"debit",l:"Debit",i:"🏦",c:"#2196F3"},{v:"cash",l:"Cash",i:"💵",c:"#4CAF50"},{v:"loan",l:"Loan / Mortgage",i:"🏠",c:"#FF9800"},{v:"investment",l:"Investment",i:"📈",c:"#7E57C2"},{v:"tax",l:"Tax Owed",i:"🏛",c:"#78909C"}];
+const DGRP=[
+{id:"g_essentials",name:"Essentials",icon:"🏠",color:"#5C6BC0",subs:[
+  {id:"housing",name:"Housing"},{id:"utilities",name:"Utilities"},{id:"insurance",name:"Insurance"},{id:"health",name:"Health"}]},
+{id:"g_daily",name:"Daily Living",icon:"🍜",color:"#EF5350",subs:[
+  {id:"food",name:"Food & Dining"},{id:"transport",name:"Transport"},{id:"personal",name:"Personal Care"}]},
+{id:"g_lifestyle",name:"Lifestyle",icon:"🎬",color:"#FFA726",subs:[
+  {id:"shopping",name:"Shopping"},{id:"entertainment",name:"Entertainment"},{id:"travel",name:"Travel"},{id:"education",name:"Education"}]},
+{id:"g_family",name:"Family",icon:"👨‍👩‍👧",color:"#EC407A",subs:[
+  {id:"childcare",name:"Childcare"},{id:"school_fees",name:"School Fees"},{id:"family_gifts",name:"Family Gifts"},{id:"family_other",name:"Family Other"}]},
+{id:"g_giving",name:"Giving",icon:"🎁",color:"#FF7043",subs:[
+  {id:"gifts",name:"Gifts"},{id:"donations",name:"Donations"}]},
+{id:"g_finance",name:"Finance",icon:"💰",color:"#541346",subs:[
+  {id:"debt_payment",name:"Debt Payment"},{id:"subscriptions",name:"Subscriptions"},{id:"transfer",name:"Transfer"}]},
+{id:"g_other",name:"Other",icon:"📌",color:"#90A4AE",subs:[
+  {id:"other",name:"Other"}]}
+];
+/* Flatten for lookups — gC will resolve group+sub */
+const flatCats=(groups)=>{const out=[];groups.forEach(g=>g.subs.forEach(s=>out.push({id:s.id,name:s.name,groupId:g.id,groupName:g.name,icon:g.icon,color:g.color})));return out};
+/* Build grouped options for <select> */
+const catSelOpts=(groups)=>{const o=[];groups.forEach(g=>{o.push({value:"__grp_"+g.id,label:"── "+g.icon+" "+g.name+" ──",disabled:true});g.subs.forEach(s=>o.push({value:s.id,label:"    "+s.name}))});return o};
+/* CSV export */
+const dlCSV=(filename,rows)=>{const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s};
+  const csv=rows.map(r=>r.map(esc).join(",")).join("\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href)};
+const exportTxns=(txns,groups,accounts)=>{const fc=flatCats(groups);const hdr=["Date","Type","Amount","Currency","Amount SGD","Category Group","Category","Account","Note","Fulfillment","Life Energy Hrs"];
+  const rows=[hdr,...txns.map(t=>{const c=fc.find(x=>x.id===t.categoryId)||{};const a=accounts.find(x=>x.id===t.accountId);
+    return[t.date,t.type,t.amount,t.currency,toS(t.amount,t.currency).toFixed(2),c.groupName||"",c.name||"",a?.name||"",t.note||"",t.fulfillment||"",t.lifeEnergyHrs||""]})];
+  dlCSV("ymoyl-transactions-"+today()+".csv",rows)};
+const exportAccounts=(accounts)=>{const hdr=["Name","Type","Currency","Balance","Credit Limit","APR","Stmt Day","Due Day","Monthly Payment"];
+  const rows=[hdr,...accounts.map(a=>[a.name,a.type,a.currency,a.initialBalance,a.creditLimit||"",a.apr||"",a.stmtDay||"",a.dueDay||"",a.monthlyPayment||""])];
+  dlCSV("ymoyl-accounts-"+today()+".csv",rows)};
+const exportAll=(state)=>{dlCSV("ymoyl-full-backup-"+today()+".csv",[["YMOYL Full Data Backup"],[JSON.stringify(state)]])};
+
+/* ═══ HELPERS ═══ */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const toS=(a,c)=>a*(FX[c]||1);
+const fm=(a,c="SGD")=>(CUR[c]||"")+(Math.abs(a)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const fs=(iso)=>{const d=new Date(iso);return d.getDate()+" "+MO[d.getMonth()]};
+const today=()=>new Date().toISOString().slice(0,10);
+const tMonth=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
+const calcMin=(b,apr)=>Math.max(b*.03,25,b*(apr/100/12));
+const calcPay=(b,apr,mp)=>{if(mp<=0||b<=0)return{m:0,ti:0};let bal=b,mo=0,ti=0,mr=apr/100/12;while(bal>.01&&mo<600){const i=bal*mr;ti+=i;bal=bal+i-mp;mo++;if(bal<0)bal=0}return{m:mo,ti}};
+
+/* ═══ STORAGE ═══ */
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+const DEF={accounts:[],catGroups:DGRP,transactions:[],recurringRules:[],debtPayments:{},
+  settings:{monthlySalary:0,weeklyWorkHours:40,weeklyCommuteHours:5,weeklyPrepHours:3,monthlyWorkCosts:0,monthlyInvestmentIncome:0,paydayDate:27,availableCashOverride:null},
+  monthlyIncome:{}};
+
+/* ═══ TINY COMPONENTS ═══ */
+function PBar({value,max,color="#1B5E3B",h=8}){
+  return e("div",{className:"pbar",style:{height:h,background:"#f0f2f5"}},e("div",{className:"pbar-f",style:{width:Math.min((value/Math.max(max,1))*100,100)+"%",height:"100%",background:color}}))
+}
+function Dots({value,onChange,sz=24}){
+  return e("div",{style:{display:"flex",gap:5,alignItems:"center"}},
+    [1,2,3,4,5].map(i=>e("button",{key:i,onClick:()=>onChange(i),style:{width:sz,height:sz,borderRadius:"50%",border:"2px solid "+FC[i],background:value>=i?FC[i]:"#fff",cursor:"pointer",transition:"all .15s",display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*.42,color:value>=i?"#fff":FC[i],fontWeight:800}},i)),
+    value>0&&e("span",{style:{fontSize:11,color:"#888",marginLeft:4,fontWeight:600}},FL[value]))
+}
+function Inp({label,...p}){return e("div",{style:{display:"flex",flexDirection:"column",gap:4}},label&&e("div",{className:"lbl"},label),e("input",{className:"inp",...p}))}
+function Sel({label,options,...p}){return e("div",{style:{display:"flex",flexDirection:"column",gap:4}},label&&e("div",{className:"lbl"},label),e("select",{className:"sel",...p},options.map(o=>e("option",{key:o.value??o,value:o.value??o,disabled:!!o.disabled,style:o.disabled?{fontWeight:700,color:"#555",background:"#f0f2f5"}:{}},o.label??o))))}
+function Sheet({open,onClose,title,children}){if(!open)return null;return e("div",null,e("div",{className:"overlay",onClick:onClose}),e("div",{className:"sheet"},e("div",{className:"sheet-h"}),title&&e("div",{className:"sheet-t"},title),e("div",{className:"sheet-b"},children)))}
+
+/* ═══════════════════════════ MAIN APP ═══════════════════════════ */
+function App(){
+  const[S,setS]=us(DEF);
+  const[tab,sTab]=us("home");
+  const[loading,sLoading]=us(true);
+  const[sheet,sSheet]=us(null);
+  const[toast,sToast]=us("");
+  const[vm,sVM]=us(tMonth());
+  const[selAcc,sSelAcc]=us(null);
+  const[dCur,sDCur]=us("SGD");
+
+  const flash=m=>{sToast(m);setTimeout(()=>sToast(""),2200)};
+  const upd=uc(fn=>{setS(p=>{const n=fn(p);LS.set("ymoyl-v3",n);return n})},[]);
+  const sup=(k,v)=>sSheet(p=>({...p,d:{...p.d,[k]:v}}));
+
+  ue(()=>{const d=LS.get("ymoyl-v3");if(d){
+    /* Migrate old flat categories to catGroups if needed */
+    if(d.categories&&!d.catGroups){d.catGroups=DGRP;delete d.categories}
+    if(!d.catGroups||!d.catGroups.length)d.catGroups=DGRP;
+    setS(p=>({...p,...d}))}sLoading(false)},[]);
+
+  /* Recurring processor */
+  ue(()=>{if(loading)return;const td=today(),d=new Date(td);let nw=[];
+    S.recurringRules.forEach(r=>{if(!r.active)return;if(S.transactions.find(t=>t.recurringId===r.id&&t.date===td))return;if(d.getDate()!==r.dayOfMonth)return;
+      if(r.type==="auto")nw.push({id:uid(),amount:r.amount,currency:r.currency,categoryId:r.categoryId,accountId:r.accountId,note:r.name+" (auto)",fulfillment:r.fulfillment||3,date:td,recurringId:r.id,type:"expense"})});
+    if(nw.length)upd(s=>({...s,transactions:[...nw,...s.transactions]}))
+  },[loading]);
+
+  /* ═══ DERIVED ═══ */
+  /* Monthly income = sum of all income transactions for that month */
+  const mTx=um(()=>S.transactions.filter(t=>t.date?.slice(0,7)===vm),[S.transactions,vm]);
+  const mExp=um(()=>mTx.filter(t=>t.type==="expense").reduce((s,t)=>s+toS(t.amount,t.currency),0),[mTx]);
+  const mInc=um(()=>mTx.filter(t=>t.type==="income").reduce((s,t)=>s+toS(t.amount,t.currency),0),[mTx]);
+
+  /* Life energy rate: rolling 3-month avg of actual income transactions ÷ total work hours.
+     Falls back to settings.monthlySalary if no income logged yet. */
+  const ler=um(()=>{
+    const s=S.settings;const h=((s.weeklyWorkHours||0)+(s.weeklyCommuteHours||0)+(s.weeklyPrepHours||0))*4.33;
+    if(h<=0)return 0;
+    const now=new Date();const months=[];
+    for(let i=0;i<3;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))}
+    const incomes=months.map(ym=>S.transactions.filter(t=>t.type==="income"&&t.date?.slice(0,7)===ym).reduce((s,t)=>s+toS(t.amount,t.currency),0));
+    const nonZero=incomes.filter(v=>v>0);
+    const avgInc=nonZero.length>0?nonZero.reduce((a,b)=>a+b,0)/nonZero.length:(s.monthlySalary||0);
+    const realPay=avgInc-(s.monthlyWorkCosts||0);
+    return realPay>0?realPay/h:0
+  },[S.settings,S.transactions]);
+
+  const sr=mInc>0?((mInc-mExp)/mInc*100):0;
+  const gA=id=>S.accounts.find(a=>a.id===id);
+  const fc=um(()=>flatCats(S.catGroups||DGRP),[S.catGroups]);
+  const gC=id=>fc.find(c=>c.id===id)||{name:"Other",icon:"📌",color:"#90A4AE",groupName:"Other"};
+
+  const aBal=uc(acc=>{if(!acc)return 0;const tx=S.transactions.filter(t=>t.accountId===acc.id);
+    if(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax"){
+      return acc.initialBalance-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
+    return acc.initialBalance+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
+
+  const pending=um(()=>{const td=today(),d=new Date(td);
+    return S.recurringRules.filter(r=>r.active&&r.type==="manual"&&r.dayOfMonth===d.getDate()&&!S.transactions.find(t=>t.recurringId===r.id&&t.date===td))},[S.recurringRules,S.transactions]);
+
+  const catBD=um(()=>{const m={};mTx.filter(t=>t.type==="expense").forEach(t=>{const c=t.categoryId||"other";if(!m[c])m[c]={t:0,n:0,f:0};m[c].t+=toS(t.amount,t.currency);m[c].n++;m[c].f+=t.fulfillment||0});
+    return Object.entries(m).map(([id,d])=>{const c=gC(id);return{...c,id,total:d.t,count:d.n,af:d.n?d.f/d.n:0}}).sort((a,b)=>b.total-a.total)},[mTx,fc]);
+
+  const wallD=um(()=>{const n=new Date();return Array.from({length:12},(_,i)=>{const d=new Date(n.getFullYear(),n.getMonth()-11+i,1);const ym=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");const tx=S.transactions.filter(t=>t.date?.slice(0,7)===ym);
+    return{ym,label:MO[d.getMonth()],exp:tx.filter(t=>t.type==="expense").reduce((s,t)=>s+toS(t.amount,t.currency),0),inc:tx.filter(t=>t.type==="income").reduce((s,t)=>s+toS(t.amount,t.currency),0)}})},[S.transactions]);
+
+  const avgExp=um(()=>{const d=wallD.filter(m=>m.exp>0);return d.length?d.reduce((s,m)=>s+m.exp,0)/d.length:0},[wallD]);
+  const fiP=avgExp>0?Math.min(((S.settings.monthlyInvestmentIncome||0)/avgExp)*100,100):0;
+  const shiftM=dir=>{const[y,m]=vm.split("-").map(Number);const d=new Date(y,m-1+dir,1);sVM(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))};
+
+  /* ═══ DEBT DERIVED ═══ */
+  const debtAccs=um(()=>S.accounts.filter(a=>a.type==="credit_card"||a.type==="loan"||a.type==="tax"),[S.accounts]);
+  const ccAccs=um(()=>S.accounts.filter(a=>a.type==="credit_card"),[S.accounts]);
+  const loanAccs=um(()=>S.accounts.filter(a=>a.type==="loan"),[S.accounts]);
+  const taxAccs=um(()=>S.accounts.filter(a=>a.type==="tax"),[S.accounts]);
+
+  const totalDebt=um(()=>debtAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[debtAccs,aBal]);
+  const ccDebt=um(()=>ccAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[ccAccs,aBal]);
+  const loanDebt=um(()=>loanAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[loanAccs,aBal]);
+  const taxDebt=um(()=>taxAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[taxAccs,aBal]);
+
+  const minDebtPay=um(()=>debtAccs.reduce((s,a)=>{const b=aBal(a);if(b<=0)return s;
+    if(a.type==="credit_card")return s+calcMin(b,a.apr||0);
+    return s+(a.monthlyPayment||0)},[debtAccs,aBal]),0);
+
+  const availCash=um(()=>{
+    if(S.settings.availableCashOverride!==null&&S.settings.availableCashOverride!==undefined&&S.settings.availableCashOverride!=="")return parseFloat(S.settings.availableCashOverride)||0;
+    return Math.max(mInc-mExp,0)},[S.settings.availableCashOverride,mInc,mExp]);
+
+  // Payments this month per debt
+  const debtPmtsThisMonth=uc(accId=>{return S.transactions.filter(t=>(t.type==="payment"||t.type==="debt_payment")&&t.accountId===accId&&t.date?.slice(0,7)===vm).reduce((s,t)=>s+toS(t.amount,t.currency),0)},[S.transactions,vm]);
+
+  /* ═══ SHEET OPENERS ═══ */
+  const openTxn=(def={})=>sSheet({t:"txn",d:{amount:"",currency:"SGD",categoryId:"food",accountId:S.accounts[0]?.id||"",note:"",fulfillment:3,date:today(),txnType:"expense",...def}});
+  const openAcc=()=>sSheet({t:"acc",d:{name:"",type:"debit",currency:"SGD",initialBalance:0,creditLimit:0,apr:0,stmtDay:15,dueDay:5,monthlyPayment:0}});
+  const openXfer=()=>sSheet({t:"xfer",d:{fromId:S.accounts[0]?.id||"",toId:S.accounts[1]?.id||"",amount:"",fromCurrency:"SGD",toCurrency:"SGD",date:today()}});
+  const openRec=()=>sSheet({t:"rec",d:{name:"",amount:"",currency:"SGD",categoryId:"subscriptions",accountId:S.accounts[0]?.id||"",type:"auto",dayOfMonth:1,fulfillment:3,active:true}});
+  const openDebtPmt=(acc)=>sSheet({t:"dpmt",d:{accountId:acc.id,amount:"",currency:acc.currency,date:today(),note:"Payment to "+acc.name,fromAccountId:S.accounts.find(a=>a.type==="debit"||a.type==="cash")?.id||""}});
+
+  /* ═══ SHEET SAVERS ═══ */
+  const saveTxn=()=>{const d=sheet.d;const a=parseFloat(d.amount);if(!a)return;
+    const t={id:d.id||uid(),amount:a,currency:d.currency,categoryId:d.categoryId,accountId:d.accountId,note:d.note,fulfillment:d.fulfillment||3,date:d.date,type:d.txnType,recurringId:d.recurringId||null};
+    upd(s=>({...s,transactions:d.id?s.transactions.map(x=>x.id===d.id?t:x):[t,...s.transactions]}));sSheet(null);flash("Logged!")};
+
+  const saveAcc=()=>{const d=sheet.d;if(!d.name)return;
+    const a={...d,id:d.id||uid(),initialBalance:parseFloat(d.initialBalance)||0,creditLimit:parseFloat(d.creditLimit)||0,apr:parseFloat(d.apr)||0,stmtDay:parseInt(d.stmtDay)||15,dueDay:parseInt(d.dueDay)||5,monthlyPayment:parseFloat(d.monthlyPayment)||0};
+    upd(s=>({...s,accounts:d.id?s.accounts.map(x=>x.id===d.id?a:x):[...s.accounts,a]}));sSheet(null);flash(d.id?"Updated":"Added!")};
+
+  const saveXfer=()=>{const d=sheet.d;const a=parseFloat(d.amount);if(!a||d.fromId===d.toId)return;
+    const fa=gA(d.fromId),ta=gA(d.toId);const cv=a*(FX[d.fromCurrency]||1)/(FX[d.toCurrency]||1);
+    upd(s=>({...s,transactions:[{id:uid(),amount:a,currency:d.fromCurrency,categoryId:"transfer",accountId:d.fromId,note:"→ "+(ta?.name||""),fulfillment:3,date:d.date,type:"transfer_out"},{id:uid(),amount:Math.round(cv*100)/100,currency:d.toCurrency,categoryId:"transfer",accountId:d.toId,note:"← "+(fa?.name||""),fulfillment:3,date:d.date,type:"transfer_in"},...s.transactions]}));sSheet(null);flash("Transferred!")};
+
+  const saveRec=()=>{const d=sheet.d;if(!d.name||!d.amount)return;
+    const r={...d,id:d.id||uid(),amount:parseFloat(d.amount),dayOfMonth:parseInt(d.dayOfMonth)||1};
+    upd(s=>({...s,recurringRules:d.id?s.recurringRules.map(x=>x.id===d.id?r:x):[...s.recurringRules,r]}));sSheet(null);flash("Set!")};
+
+  const saveDebtPmt=()=>{const d=sheet.d;const a=parseFloat(d.amount);if(!a)return;
+    const txns=[{id:uid(),amount:a,currency:d.currency,categoryId:"debt_payment",accountId:d.accountId,note:d.note,fulfillment:3,date:d.date,type:"debt_payment"}];
+    if(d.fromAccountId){txns.push({id:uid(),amount:a,currency:d.currency,categoryId:"debt_payment",accountId:d.fromAccountId,note:"Paid "+gA(d.accountId)?.name,fulfillment:3,date:d.date,type:"payment"})}
+    upd(s=>({...s,transactions:[...txns,...s.transactions]}));sSheet(null);flash("Payment logged!")};
+
+  const delTxn=id=>{upd(s=>({...s,transactions:s.transactions.filter(t=>t.id!==id)}));flash("Deleted")};
+  const delAcc=id=>{upd(s=>({...s,accounts:s.accounts.filter(a=>a.id!==id),transactions:s.transactions.filter(t=>t.accountId!==id)}));sSelAcc(null);flash("Removed")};
+
+  if(loading)return e("div",{style:{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",color:"#888"}},"Loading...");
+
+  /* ═══════════════════════════ RENDER ═══════════════════════════ */
+  return e("div",null,
+
+    /* ═══ HOME ═══ */
+    tab==="home"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        e("div",null,e("div",{style:{fontSize:14,color:"#888",fontWeight:600}},"Summary"),e("div",{style:{fontSize:20,fontWeight:900}},"Your Money ",e("span",{style:{color:"var(--green)"}},"or")," Your Life")),
+        e("button",{onClick:()=>sTab("settings"),style:{width:36,height:36,borderRadius:10,background:"#f0f2f5",border:"none",cursor:"pointer",fontSize:18}},"⚙")),
+
+      // Pending
+      pending.length>0&&e("div",{className:"card",style:{background:"#FFF8E1",border:"1px solid #FFE082",marginBottom:12,padding:14}},
+        e("div",{style:{fontSize:13,fontWeight:800,color:"var(--orange)",marginBottom:6}},"📋 "+pending.length+" Payment"+(pending.length>1?"s":"")+" Due Today"),
+        pending.map(r=>e("div",{key:r.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}},
+          e("span",{style:{fontSize:13}},r.name),
+          e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+            e("span",{className:"mono",style:{fontWeight:700,fontSize:13}},fm(r.amount,r.currency)),
+            e("button",{className:"btn btn-p",style:{padding:"4px 12px",fontSize:11},onClick:()=>{upd(s=>({...s,transactions:[{id:uid(),amount:r.amount,currency:r.currency,categoryId:r.categoryId,accountId:r.accountId,note:r.name,fulfillment:r.fulfillment||3,date:today(),type:"expense",recurringId:r.id},...s.transactions]}));flash(r.name+" logged")}},"Pay"))))),
+
+      // Month nav
+      e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:14}},
+        e("div",{style:{flex:1,display:"flex",alignItems:"center",gap:8,background:"#fff",borderRadius:10,padding:"8px 14px",border:"1px solid var(--border)"}},e("span",{style:{fontSize:14}},"📅"),e("span",{style:{fontSize:14,fontWeight:700}},MO[parseInt(vm.split("-")[1])-1]+" "+vm.split("-")[0])),
+        e("button",{onClick:()=>shiftM(-1),style:{width:36,height:36,borderRadius:8,background:"#fff",border:"1px solid var(--border)",cursor:"pointer",fontSize:16}},"‹"),
+        e("button",{onClick:()=>shiftM(1),style:{width:36,height:36,borderRadius:8,background:"#fff",border:"1px solid var(--border)",cursor:"pointer",fontSize:16}},"›")),
+
+      // No income nudge
+      mInc===0&&vm===tMonth()&&e("div",{className:"card",style:{background:"#E3F2FD",border:"1px solid #90CAF9",marginBottom:12,padding:14,display:"flex",alignItems:"center",justifyContent:"space-between"}},
+        e("div",null,e("div",{style:{fontSize:13,fontWeight:700,color:"var(--blue)"}},"💰 No income logged this month"),e("div",{style:{fontSize:11,color:"#888"}},"Tap + and select Income to log your pay")),
+        e("button",{className:"btn btn-p",style:{padding:"8px 14px",fontSize:12},onClick:()=>openTxn({txnType:"income"})},"Log")),
+
+      // Summary
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{className:"lbl",style:{marginBottom:12}},"Period Summary"),
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}},e("span",{style:{fontSize:15,fontWeight:800}},"Net Income"),e("span",{className:"mono",style:{fontSize:18,fontWeight:700,color:mInc-mExp>=0?"var(--green)":"var(--red)"}},fm(mInc-mExp))),
+        e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:10}},e("span",{style:{fontSize:12,color:"#888"}},"Savings Rate"),e("span",{style:{fontSize:14,fontWeight:800,color:sr>=50?"var(--green)":sr>=20?"var(--orange)":"var(--red)"}},sr.toFixed(1)+"%")),
+        e("div",{style:{borderTop:"1px solid #f0f2f5",paddingTop:8,display:"flex",flexDirection:"column",gap:6}},
+          e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,color:"#555"}},"▸ Income"),e("span",{className:"mono",style:{fontSize:14,fontWeight:700,color:"var(--green)"}},fm(mInc))),
+          e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,color:"#555"}},"▸ Expenses"),e("span",{className:"mono",style:{fontSize:14,fontWeight:700,color:"var(--red)"}},fm(mExp))),
+          ler>0&&e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,color:"#555"}},"⚡ Life Energy"),e("span",{className:"mono",style:{fontSize:14,fontWeight:700,color:"var(--orange)"}},(mExp/ler).toFixed(1)+"h")))),
+
+      // Category breakdown
+      catBD.length>0&&e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{className:"lbl",style:{marginBottom:12}},"Spending Breakdown"),
+        catBD.map((c,i)=>e("div",{key:c.id,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:i?"1px solid #f0f2f5":"none"}},
+          e("span",{style:{fontSize:20}},c.icon),
+          e("div",{style:{flex:1}},
+            e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,fontWeight:700}},c.groupName?c.groupName+" › "+c.name:c.name),e("span",{className:"mono",style:{fontSize:13,fontWeight:700}},fm(c.total))),
+            e(PBar,{value:c.total,max:catBD[0]?.total||1,color:c.color,h:5}),
+            e("div",{style:{display:"flex",justifyContent:"space-between",marginTop:3}},e("span",{style:{fontSize:10,color:"#999"}},c.count+" txn · Joy "+c.af.toFixed(1)),ler>0&&e("span",{style:{fontSize:10,color:"var(--orange)"}},(c.total/ler).toFixed(1)+"h"))))))),
+
+    /* ═══ DEBT PAYOFF ═══ */
+    tab==="debt"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      // Header with currency toggle
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}},
+        e("div",{style:{fontSize:20,fontWeight:900}},"Debt Payoff"),
+        e("div",{style:{display:"flex",gap:0,background:"#f0f2f5",borderRadius:10,padding:2}},
+          ["SGD","THB","USD"].map(c=>e("button",{key:c,onClick:()=>sDCur(c),style:{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:dCur===c?"var(--green)":"transparent",color:dCur===c?"#fff":"#888",transition:"all .15s"}},c)))),
+
+      // Total Debt Hero
+      e("div",{className:"debt-hero"},
+        e("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",opacity:.8,marginBottom:4}},"Total Debt"),
+        e("div",{className:"mono",style:{fontSize:32,fontWeight:700,marginBottom:12}},fm(totalDebt)),
+        e("div",{style:{display:"flex",gap:20}},
+          ccDebt>0&&e("div",null,e("div",{style:{fontSize:10,textTransform:"uppercase",opacity:.7}},"Credit Cards"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700}},fm(ccDebt))),
+          loanDebt>0&&e("div",null,e("div",{style:{fontSize:10,textTransform:"uppercase",opacity:.7}},"Loans"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700}},fm(loanDebt))),
+          taxDebt>0&&e("div",null,e("div",{style:{fontSize:10,textTransform:"uppercase",opacity:.7}},"Tax"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700}},fm(taxDebt))))),
+
+      // Monthly Debt Budget
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{className:"lbl",style:{marginBottom:10}},"Monthly Debt Budget"),
+        e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:8}},
+          e("div",null,e("div",{style:{fontSize:12,color:"#888"}},"Available Cash"),e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--green)"}},fm(availCash))),
+          e("div",{style:{textAlign:"right"}},e("div",{style:{fontSize:12,color:"#888"}},"Min Debt Payments"),e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)"}},fm(minDebtPay)))),
+        e("div",{style:{borderTop:"1px solid #f0f2f5",paddingTop:10}},
+          e("div",{style:{fontSize:12,color:"#888"}},"After minimum payments:"),
+          e("div",{className:"mono",style:{fontSize:22,fontWeight:700,color:availCash-minDebtPay>=0?"var(--green)":"var(--red)"}},fm(Math.max(availCash-minDebtPay,0)),e("span",{style:{fontSize:13,fontWeight:600,color:"#888",fontFamily:"'Nunito',sans-serif"}}," left to allocate"))),
+        S.settings.paydayDate&&e("div",{style:{marginTop:10,background:"#FFF8E1",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#888"}},
+          "💡 Salary lands ~",MO[new Date().getMonth()]," ",S.settings.paydayDate,". Plan card payments after payday to maximize float.")),
+
+      // Add debt account button
+      e("div",{style:{display:"flex",gap:6,marginBottom:14}},
+        e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>sSheet({t:"acc",d:{name:"",type:"credit_card",currency:"SGD",initialBalance:0,creditLimit:0,apr:0,stmtDay:15,dueDay:5,monthlyPayment:0}})},"+ Add Debt Account")),
+
+      // Credit Cards
+      ccAccs.length>0&&e("div",{style:{marginBottom:16}},
+        ccAccs.map(acc=>{
+          const bal=aBal(acc),mp=calcMin(bal,acc.apr||0),mi=bal*(acc.apr||0)/100/12;
+          const paid=debtPmtsThisMonth(acc.id);
+          const pm=mp>0?calcPay(bal,acc.apr,mp):null;
+          const pa=mp>0?calcPay(bal,acc.apr,mp*2):null;
+          return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
+            // Header
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}},
+              e("div",null,e("div",{style:{fontSize:16,fontWeight:800}},acc.name),e("div",{style:{fontSize:11,color:"#888"}},"APR "+acc.apr+"% · Stmt day "+acc.stmtDay+" · Due day "+acc.dueDay)),
+              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,acc.currency),acc.creditLimit>0&&e("div",{style:{fontSize:10,color:"#999",fontFamily:"'Nunito',sans-serif"}},"of "+fm(acc.creditLimit,acc.currency)+" limit"))),
+            acc.creditLimit>0&&e(PBar,{value:bal,max:acc.creditLimit,color:"var(--red)",h:6}),
+
+            // Stats row
+            e("div",{style:{display:"flex",gap:8,marginTop:12}},
+              e("div",{className:"stat-box",style:{background:"#FFF0EE",border:"1px solid #FFCDD2"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Monthly Int."),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--red)"}},fm(mi,acc.currency))),
+              e("div",{className:"stat-box",style:{background:"#FFF8E1",border:"1px solid #FFE082"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--orange)",textTransform:"uppercase",letterSpacing:".06em"}},"Min Payment"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--orange)"}},fm(mp,acc.currency))),
+              e("div",{className:"stat-box",style:{background:"#E8F5E9",border:"1px solid #A5D6A7"}},e("div",{style:{fontSize:9,fontWeight:700,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em"}},"Paid This Mo"),e("div",{className:"mono",style:{fontSize:16,fontWeight:700,color:"var(--green)"}},fm(paid,acc.currency)))),
+
+            // Payoff scenarios
+            bal>0&&pm&&e("div",{style:{marginTop:12}},
+              e("div",{className:"lbl",style:{marginBottom:8}},"Payoff Scenarios"),
+              e("div",{style:{display:"flex",gap:8}},
+                e("div",{style:{flex:1,background:"#f8f9fb",borderRadius:12,padding:12,border:"1px solid #e8eaed"}},
+                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--orange)",marginBottom:4}},"Min Payment"),
+                  e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},pm.m),e("div",{style:{fontSize:12,color:"#888"}},"months"),
+                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Total interest: "+fm(pm.ti,acc.currency))),
+                pa&&e("div",{style:{flex:1,background:"#f8f9fb",borderRadius:12,padding:12,border:"2px solid var(--teal)"}},
+                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--teal)",marginBottom:4}},"Aggressive ×2"),
+                  e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},pa.m),e("div",{style:{fontSize:12,color:"#888"}},"months"),
+                  e("div",{style:{fontSize:11,color:"var(--red)",marginTop:4}},"Total interest: "+fm(pa.ti,acc.currency)),
+                  e("div",{style:{fontSize:11,fontWeight:800,color:"var(--green)"}},"Save "+fm(pm.ti-pa.ti,acc.currency))))),
+
+            // Actions
+            e("div",{style:{display:"flex",gap:6,marginTop:12}},
+              e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openDebtPmt(acc)},"💰 Log Payment"),
+              e("button",{className:"btn btn-s",style:{fontSize:13},onClick:()=>sSheet({t:"acc",d:{...acc}})},"Edit"),
+              e("button",{onClick:()=>{if(confirm("Delete?"))delAcc(acc.id)},style:{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:16}},"✕")))})),
+
+      // Loans
+      loanAccs.length>0&&e("div",{style:{marginBottom:16}},
+        loanAccs.map(acc=>{
+          const bal=aBal(acc),mi=bal*(acc.apr||0)/100/12,prin=(acc.monthlyPayment||0)-mi;
+          const paid=debtPmtsThisMonth(acc.id);
+          return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+              e("div",null,e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:20}},"🏠"),e("span",{style:{fontSize:16,fontWeight:800}},acc.name)),
+                e("div",{style:{fontSize:11,color:"#888"}},"APR "+acc.apr+"% · Due day "+acc.dueDay+" · Payment "+fm(acc.monthlyPayment||0,acc.currency))),
+              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--red)",textAlign:"right"}},fm(bal,acc.currency))),
+            e("div",{style:{display:"flex",gap:12,marginTop:10,fontSize:12}},
+              e("span",null,"Monthly interest: ",e("span",{className:"mono",style:{color:"var(--red)",fontWeight:700}},fm(mi,acc.currency))),
+              e("span",null,"Principal: ",e("span",{className:"mono",style:{color:"var(--green)",fontWeight:700}},fm(Math.max(prin,0),acc.currency)))),
+            e("div",{style:{display:"flex",gap:6,marginTop:10}},
+              e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openDebtPmt(acc)},"💰 Log Payment"),
+              e("button",{className:"btn btn-s",style:{fontSize:13},onClick:()=>sSheet({t:"acc",d:{...acc}})},"Edit")))})),
+
+      // Tax
+      taxAccs.length>0&&e("div",{style:{marginBottom:16}},
+        taxAccs.map(acc=>{
+          const bal=aBal(acc);
+          return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:20}},"🏛"),e("span",{style:{fontSize:16,fontWeight:800}},acc.name)),
+              e("div",{className:"mono",style:{fontSize:20,fontWeight:700,color:bal>0?"var(--red)":"var(--green)"}},fm(bal,acc.currency))),
+            e("div",{style:{display:"flex",gap:6,marginTop:10}},
+              e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openDebtPmt(acc)},"💰 Log Payment"),
+              e("button",{className:"btn btn-s",style:{fontSize:13},onClick:()=>sSheet({t:"acc",d:{...acc}})},"Edit")))})),
+
+      debtAccs.length===0&&e("div",{className:"card",style:{textAlign:"center",padding:32,color:"#aaa"}},e("div",{style:{fontSize:40,marginBottom:8}},"🎯"),"Add your first debt account to start tracking payoff")),
+
+    /* ═══ TRANSACTIONS ═══ */
+    tab==="txns"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}},
+        e("div",{style:{fontSize:20,fontWeight:900}},"Transactions"),
+        e("button",{className:"btn btn-s",style:{fontSize:12,padding:"8px 12px"},onClick:openRec},"🔄 Recurring")),
+
+      state.recurringRules.length>0&&e("div",{className:"card",style:{marginBottom:12,padding:14}},
+        e("div",{className:"lbl",style:{marginBottom:8}},"Recurring Rules"),
+        S.recurringRules.map(r=>e("div",{key:r.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f2f5"}},
+          e("div",null,e("div",{style:{fontSize:13,fontWeight:700}},r.name," ",e("span",{style:{fontSize:10,color:r.type==="auto"?"var(--green)":"var(--orange)",fontWeight:800,padding:"1px 6px",borderRadius:4,background:r.type==="auto"?"#E8F5E9":"#FFF3E0"}},r.type==="auto"?"Auto":"Manual")),e("div",{style:{fontSize:11,color:"#999"}},"Day "+r.dayOfMonth+" · "+(gA(r.accountId)?.name||"—"))),
+          e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{className:"mono",style:{fontWeight:700,fontSize:13}},fm(r.amount,r.currency)),e("button",{onClick:()=>{upd(s=>({...s,recurringRules:s.recurringRules.filter(x=>x.id!==r.id)}));flash("Removed")},style:{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:16}},"✕"))))),
+
+      e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},
+        e("button",{onClick:()=>shiftM(-1),style:{width:28,height:28,borderRadius:6,background:"#fff",border:"1px solid var(--border)",cursor:"pointer",fontSize:14}},"‹"),
+        e("span",{style:{fontSize:14,fontWeight:800,flex:1,textAlign:"center"}},MO[parseInt(vm.split("-")[1])-1]+" "+vm.split("-")[0]),
+        e("button",{onClick:()=>shiftM(1),style:{width:28,height:28,borderRadius:6,background:"#fff",border:"1px solid var(--border)",cursor:"pointer",fontSize:14}},"›")),
+
+      mTx.length===0?e("div",{className:"card",style:{textAlign:"center",padding:32,color:"#aaa"}},"No transactions"):
+        mTx.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>{const cat=gC(t.categoryId),acc=gA(t.accountId),isIn=t.type==="income"||t.type==="transfer_in";
+          return e("div",{key:t.id,style:{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:"1px solid #f0f2f5"}},
+            e("div",{style:{width:40,height:40,borderRadius:12,background:cat.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}},cat.icon),
+            e("div",{style:{flex:1,minWidth:0}},e("div",{style:{fontSize:14,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},t.note||cat.name),e("div",{style:{fontSize:11,color:"#999"}},fs(t.date)+" · "+(acc?.name||"—"))),
+            e("div",{style:{textAlign:"right"}},e("div",{className:"mono",style:{fontSize:14,fontWeight:700,color:isIn?"var(--green)":"var(--text)"}},(isIn?"+":"-")+fm(t.amount,t.currency))),
+            e("button",{onClick:()=>delTxn(t.id),style:{background:"none",border:"none",cursor:"pointer",color:"#ddd",fontSize:14,padding:4}},"✕"))})),
+
+    /* ═══ ACCOUNTS ═══ */
+    tab==="accounts"&&!selAcc&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}},
+        e("div",{style:{fontSize:20,fontWeight:900}},"Accounts"),
+        e("div",{style:{display:"flex",gap:6}},e("button",{className:"btn btn-s",style:{fontSize:12,padding:"8px 12px"},onClick:openXfer},"↔ Transfer"),e("button",{className:"btn btn-p",style:{fontSize:12,padding:"8px 12px"},onClick:openAcc},"+ Add"))),
+
+      e("div",{className:"card",style:{marginBottom:14,textAlign:"center",background:"linear-gradient(135deg,var(--green),var(--green2))",color:"#fff"}},
+        e("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",opacity:.8,marginBottom:4}},"Net Worth"),
+        e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},fm(S.accounts.reduce((s,a)=>{const b=aBal(a);return s+(a.type==="credit_card"||a.type==="loan"||a.type==="tax"?-b:b)},0)))),
+
+      AT.map(at=>{const accs=S.accounts.filter(a=>a.type===at.v);if(!accs.length)return null;
+        return e("div",{key:at.v,style:{marginBottom:16}},
+          e("div",{style:{fontSize:12,fontWeight:800,color:"#888",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}},at.i+" "+at.l),
+          e("div",{className:"scrollx"},accs.map(a=>{const b=aBal(a);const isD=a.type==="credit_card"||a.type==="loan"||a.type==="tax";
+            return e("div",{key:a.id,className:"acc-card",onClick:()=>sSelAcc(a.id),style:{background:"linear-gradient(135deg,"+at.c+","+at.c+"cc)"}},
+              e("div",{style:{fontSize:14,fontWeight:800,opacity:.95}},a.name),
+              e("div",{style:{fontSize:11,opacity:.7,marginBottom:10}},CUR[a.currency]+" · "+at.l),
+              e("div",{className:"mono",style:{fontSize:22,fontWeight:700}},(isD&&b>0?"-":"")+fm(b,a.currency)),
+              a.type==="credit_card"&&e("div",{style:{marginTop:8}},e(PBar,{value:b,max:a.creditLimit||1,color:"rgba(255,255,255,.5)",h:4}),e("div",{style:{fontSize:10,opacity:.7,marginTop:3}},"of "+fm(a.creditLimit,a.currency)+" limit")))})))}),
+
+      S.accounts.length===0&&e("div",{className:"card",style:{textAlign:"center",padding:32,color:"#aaa"}},e("div",{style:{fontSize:40,marginBottom:8}},"🏦"),"Add your first account")),
+
+    /* ═══ INSIGHTS ═══ */
+    tab==="insights"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      e("div",{style:{fontSize:20,fontWeight:900,marginBottom:14}},"Insights"),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{className:"lbl",style:{marginBottom:14}},"Income vs Expenses — 12 Months"),
+        e("div",{style:{display:"flex",alignItems:"flex-end",gap:3,height:160}},
+          wallD.map((m,i)=>{const mx=Math.max(...wallD.map(d=>Math.max(d.inc,d.exp)),1);
+            return e("div",{key:i,style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}},
+              e("div",{style:{display:"flex",gap:1,alignItems:"flex-end",height:130}},
+                e("div",{style:{width:8,borderRadius:"3px 3px 0 0",height:Math.max((m.inc/mx)*120,1)+"px",background:"var(--blue)",opacity:.6}}),
+                e("div",{style:{width:8,borderRadius:"3px 3px 0 0",height:Math.max((m.exp/mx)*120,1)+"px",background:m.exp>m.inc?"var(--red)":"var(--green)",opacity:.7}})),
+              e("div",{style:{fontSize:9,color:"#999"}},m.label))})),
+        e("div",{style:{display:"flex",gap:16,justifyContent:"center",marginTop:10}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#888"}},e("div",{style:{width:8,height:8,borderRadius:2,background:"var(--blue)",opacity:.6}}),"Income"),
+          e("div",{style:{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#888"}},e("div",{style:{width:8,height:8,borderRadius:2,background:"var(--green)",opacity:.7}}),"Expenses"))),
+
+      ler>0&&e("div",{className:"card",style:{marginBottom:12,textAlign:"center"}},
+        e("div",{className:"lbl",style:{marginBottom:6}},"Your Real Hourly Rate"),
+        e("div",{className:"mono",style:{fontSize:32,fontWeight:700,color:"var(--green)"}},"S$"+ler.toFixed(2),e("span",{style:{fontSize:14,color:"#888"}},"/hr")),
+        e("div",{style:{fontSize:11,color:"#999",marginTop:4}},"Every S$1 = "+(1/ler*60).toFixed(1)+" min of your life"),
+        e("div",{style:{fontSize:10,color:"#bbb",marginTop:2}},"Rolling 3-month avg income")),
+
+      e("div",{className:"card",style:{marginBottom:12,textAlign:"center"}},
+        e("div",{className:"lbl",style:{marginBottom:12}},"FI Crossover Progress"),
+        e("div",{style:{position:"relative",width:140,height:140,margin:"0 auto"}},
+          e("svg",{viewBox:"0 0 140 140",style:{transform:"rotate(-90deg)"}},
+            e("circle",{cx:70,cy:70,r:60,fill:"none",stroke:"#f0f2f5",strokeWidth:10}),
+            e("circle",{cx:70,cy:70,r:60,fill:"none",stroke:"var(--purple2)",strokeWidth:10,strokeDasharray:fiP*3.77+" 377",strokeLinecap:"round",style:{transition:"stroke-dasharray .6s ease"}})),
+          e("div",{style:{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)"}},e("div",{className:"mono",style:{fontSize:28,fontWeight:700,color:"var(--purple2)"}},fiP.toFixed(0)+"%"))))),
+
+    /* ═══ SETTINGS ═══ */
+    tab==="settings"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
+      e("div",{style:{fontSize:20,fontWeight:900,marginBottom:14}},"Settings"),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--green)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}},"⚡ Life Energy Calculator"),
+        e("div",{style:{fontSize:11,color:"#888",marginBottom:10,lineHeight:1.5}},"Log your salary as an income transaction each payday (via the + button). Your life energy rate auto-calculates from your rolling 3-month average income."),
+        Inp({label:"Base Salary (SGD, fallback if no income logged)",type:"number",value:S.settings.monthlySalary||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,monthlySalary:parseFloat(ev.target.value)||0}}))}),
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10}},
+          Inp({label:"Work hrs/wk",type:"number",value:S.settings.weeklyWorkHours||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,weeklyWorkHours:parseFloat(ev.target.value)||0}}))}),
+          Inp({label:"Commute/wk",type:"number",value:S.settings.weeklyCommuteHours||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,weeklyCommuteHours:parseFloat(ev.target.value)||0}}))}),
+          Inp({label:"Prep hrs/wk",type:"number",value:S.settings.weeklyPrepHours||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,weeklyPrepHours:parseFloat(ev.target.value)||0}}))})),
+        e("div",{style:{marginTop:10}},Inp({label:"Monthly Work Costs (SGD)",type:"number",value:S.settings.monthlyWorkCosts||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,monthlyWorkCosts:parseFloat(ev.target.value)||0}}))})),
+        e("div",{style:{marginTop:10}},Inp({label:"Monthly Investment Income (SGD)",type:"number",value:S.settings.monthlyInvestmentIncome||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,monthlyInvestmentIncome:parseFloat(ev.target.value)||0}}))})),
+        ler>0&&e("div",{style:{marginTop:14,padding:12,background:"#E8F5E9",borderRadius:10,textAlign:"center"}},e("span",{style:{fontSize:12,color:"#888"}},"Real hourly rate: "),e("span",{className:"mono",style:{fontSize:20,fontWeight:700,color:"var(--green)"}},"S$"+ler.toFixed(2)+"/hr"),e("div",{style:{fontSize:10,color:"#999",marginTop:4}},"Based on rolling 3-month avg income minus work costs"))),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--purple)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}},"💰 Debt Budget Settings"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+          Inp({label:"Payday Date",type:"number",placeholder:"e.g. 27",value:S.settings.paydayDate||"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,paydayDate:parseInt(ev.target.value)||0}}))}),
+          Inp({label:"Override Available Cash",type:"number",placeholder:"Leave blank for auto",value:S.settings.availableCashOverride??"",onChange:ev=>upd(s=>({...s,settings:{...s.settings,availableCashOverride:ev.target.value===""?null:ev.target.value}}))}))),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--purple2)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}},"📂 Category Groups"),
+        e("div",{style:{fontSize:11,color:"#888",marginBottom:12}},"Tap a group to expand. Add/rename/remove groups and subcategories."),
+        (S.catGroups||DGRP).map((g,gi)=>e("div",{key:g.id,style:{marginBottom:10,background:"#f8f9fb",borderRadius:12,overflow:"hidden",border:"1px solid #eee"}},
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",cursor:"pointer"},
+            onClick:()=>{/* toggle expand via a data attr trick */const el=document.getElementById("cg_"+g.id);if(el)el.style.display=el.style.display==="none"?"block":"none"}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+              e("span",{style:{fontSize:18}},g.icon),
+              e("span",{style:{fontSize:14,fontWeight:800}},g.name),
+              e("span",{style:{fontSize:11,color:"#999",marginLeft:4}},g.subs.length+" sub")),
+            e("div",{style:{display:"flex",gap:4}},
+              e("button",{onClick:ev=>{ev.stopPropagation();const n=prompt("Rename group:",g.name);if(n)upd(s=>({...s,catGroups:s.catGroups.map(x=>x.id===g.id?{...x,name:n}:x)}))},style:{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#888"}},"✎"),
+              e("button",{onClick:ev=>{ev.stopPropagation();const ic=prompt("Group emoji icon:",g.icon);if(ic)upd(s=>({...s,catGroups:s.catGroups.map(x=>x.id===g.id?{...x,icon:ic}:x)}))},style:{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#888"}},"🎨"),
+              g.subs.length===0&&e("button",{onClick:ev=>{ev.stopPropagation();if(confirm("Remove group '"+g.name+"'?"))upd(s=>({...s,catGroups:s.catGroups.filter(x=>x.id!==g.id)}))},style:{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"var(--red)"}},"✕"))),
+          e("div",{id:"cg_"+g.id,style:{display:"none",padding:"0 14px 10px"}},
+            g.subs.map((s,si)=>e("div",{key:s.id,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderTop:si?"1px solid #eee":"none"}},
+              e("span",{style:{fontSize:13,paddingLeft:8}},s.name),
+              e("div",{style:{display:"flex",gap:4}},
+                e("button",{onClick:()=>{const n=prompt("Rename subcategory:",s.name);if(n)upd(st=>({...st,catGroups:st.catGroups.map(x=>x.id===g.id?{...x,subs:x.subs.map(y=>y.id===s.id?{...y,name:n}:y)}:x)}))},style:{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"#888"}},"✎"),
+                e("button",{onClick:()=>{if(confirm("Remove '"+s.name+"'?"))upd(st=>({...st,catGroups:st.catGroups.map(x=>x.id===g.id?{...x,subs:x.subs.filter(y=>y.id!==s.id)}:x)}))},style:{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--red)"}},"✕")))),
+            e("div",{style:{display:"flex",gap:6,marginTop:6}},
+              e("input",{id:"ns_"+g.id,placeholder:"New subcategory",className:"inp",style:{flex:1,fontSize:12,padding:"8px 10px"}}),
+              e("button",{className:"btn btn-s",style:{fontSize:11,padding:"6px 12px"},onClick:()=>{const el=document.getElementById("ns_"+g.id);const n=el.value.trim();if(!n)return;upd(st=>({...st,catGroups:st.catGroups.map(x=>x.id===g.id?{...x,subs:[...x.subs,{id:uid(),name:n}]}:x)}));el.value="";flash("Added")}},"Add"))))),
+        e("div",{style:{display:"flex",gap:6,marginTop:8}},
+          e("input",{id:"ngrp",placeholder:"New group name",className:"inp",style:{flex:1,fontSize:12,padding:"8px 10px"}}),
+          e("button",{className:"btn btn-s",style:{fontSize:11,padding:"6px 12px"},onClick:()=>{const el=document.getElementById("ngrp");const n=el.value.trim();if(!n)return;const ic=prompt("Emoji icon for group:","📁")||"📁";upd(s=>({...s,catGroups:[...s.catGroups,{id:uid(),name:n,icon:ic,color:"#78909C",subs:[]}]}));el.value="";flash("Group added")}},"Add Group"))),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--teal)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}},"📤 Export Data"),
+        e("div",{style:{fontSize:11,color:"#888",marginBottom:10}},"Download your data as CSV for safekeeping or analysis."),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportTxns(S.transactions,S.catGroups||DGRP,S.accounts);flash("Transactions exported!")}},"📋 Export Transactions (CSV)"),
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportAccounts(S.accounts);flash("Accounts exported!")}},"🏦 Export Accounts (CSV)"),
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportAll(S);flash("Full backup exported!")}},"💾 Export Full Backup (JSON in CSV)"))),
+
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--red)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}},"⚠ Data"),
+        e("button",{className:"btn btn-d",style:{fontSize:13},onClick:()=>{if(confirm("Delete ALL data?"))upd(()=>DEF);flash("Reset")}},"Reset Everything"))),
+
+    /* ═══ FAB ═══ */
+    e("button",{className:"fab",onClick:()=>openTxn()},"+"),
+
+    /* ═══ BOTTOM NAV ═══ */
+    e("div",{className:"nav"},
+      [{id:"home",i:"🏠",l:"Home"},{id:"debt",i:"💳",l:"Debt"},{id:"txns",i:"📋",l:"Txns"},{id:"accounts",i:"🏦",l:"Accounts"},{id:"insights",i:"📊",l:"Insights"}].map(n=>
+        e("button",{key:n.id,className:"nb"+(tab===n.id?" on":""),onClick:()=>{sTab(n.id);sSelAcc(null)}},e("span",{className:"ni"},n.i),e("span",{className:"nl"},n.l)))),
+
+    /* ═══ SHEETS ═══ */
+    // Add Transaction
+    e(Sheet,{open:sheet?.t==="txn",onClose:()=>sSheet(null),title:sheet?.d?.id?"Edit Transaction":"Add Transaction"},
+      sheet?.t==="txn"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        e("div",{style:{display:"flex",gap:6}},["expense","income","payment"].map(t=>e("button",{key:t,className:"pill"+(sheet.d.txnType===t?" on":""),onClick:()=>sup("txnType",t)},t[0].toUpperCase()+t.slice(1)))),
+        e("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8}},Inp({label:"Amount",type:"number",placeholder:"0.00",value:sheet.d.amount,onChange:ev=>sup("amount",ev.target.value)}),Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:CUR[c]+" "+c})),onChange:ev=>sup("currency",ev.target.value)})),
+        Sel({label:"Category",value:sheet.d.categoryId,options:catSelOpts(S.catGroups||DGRP),onChange:ev=>sup("categoryId",ev.target.value)}),
+        Sel({label:"Account",value:sheet.d.accountId,options:S.accounts.map(a=>({value:a.id,label:(AT.find(t=>t.v===a.type)?.i||"")+" "+a.name})),onChange:ev=>sup("accountId",ev.target.value)}),
+        Inp({label:"Note",type:"text",placeholder:"What was this for?",value:sheet.d.note,onChange:ev=>sup("note",ev.target.value)}),
+        Inp({label:"Date",type:"date",value:sheet.d.date,onChange:ev=>sup("date",ev.target.value)}),
+        sheet.d.txnType==="expense"&&e("div",null,e("div",{className:"lbl"},"Fulfillment"),e(Dots,{value:sheet.d.fulfillment,onChange:v=>sup("fulfillment",v)})),
+        sheet.d.amount&&ler>0&&sheet.d.txnType==="expense"&&e("div",{style:{background:"#FFF8E1",borderRadius:10,padding:12,textAlign:"center"}},e("span",{style:{fontSize:12,color:"#888"}},"Life energy: "),e("span",{className:"mono",style:{fontSize:18,fontWeight:700,color:"var(--orange)"}},(toS(parseFloat(sheet.d.amount)||0,sheet.d.currency)/ler).toFixed(1)+"h")),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveTxn},sheet.d.id?"Update":"Log Transaction"))),
+
+    // Add Account
+    e(Sheet,{open:sheet?.t==="acc",onClose:()=>sSheet(null),title:sheet?.d?.id?"Edit Account":"Add Account"},
+      sheet?.t==="acc"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        Inp({label:"Account Name",type:"text",placeholder:"e.g. UOB Visa",value:sheet.d.name,onChange:ev=>sup("name",ev.target.value)}),
+        Sel({label:"Type",value:sheet.d.type,options:AT.map(t=>({value:t.v,label:t.i+" "+t.l})),onChange:ev=>sup("type",ev.target.value)}),
+        Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:CUR[c]+" "+c})),onChange:ev=>sup("currency",ev.target.value)}),
+        Inp({label:(sheet.d.type==="credit_card"||sheet.d.type==="loan"||sheet.d.type==="tax")?"Current Balance Owed":"Current Balance",type:"number",value:sheet.d.initialBalance||"",onChange:ev=>sup("initialBalance",ev.target.value)}),
+        sheet.d.type==="credit_card"&&Inp({label:"Credit Limit",type:"number",value:sheet.d.creditLimit||"",onChange:ev=>sup("creditLimit",ev.target.value)}),
+        (sheet.d.type==="credit_card"||sheet.d.type==="loan")&&Inp({label:"APR (%)",type:"number",placeholder:"e.g. 25.9",value:sheet.d.apr||"",onChange:ev=>sup("apr",ev.target.value)}),
+        sheet.d.type==="credit_card"&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},Inp({label:"Statement Day",type:"number",value:sheet.d.stmtDay||"",onChange:ev=>sup("stmtDay",ev.target.value)}),Inp({label:"Due Day",type:"number",value:sheet.d.dueDay||"",onChange:ev=>sup("dueDay",ev.target.value)})),
+        (sheet.d.type==="loan"||sheet.d.type==="tax")&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},Inp({label:"Due Day",type:"number",value:sheet.d.dueDay||"",onChange:ev=>sup("dueDay",ev.target.value)}),Inp({label:"Monthly Payment",type:"number",value:sheet.d.monthlyPayment||"",onChange:ev=>sup("monthlyPayment",ev.target.value)})),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveAcc},sheet.d.id?"Update Account":"Add Account"))),
+
+    // Transfer
+    e(Sheet,{open:sheet?.t==="xfer",onClose:()=>sSheet(null),title:"Transfer"},
+      sheet?.t==="xfer"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        Sel({label:"From",value:sheet.d.fromId,options:S.accounts.map(a=>({value:a.id,label:a.name})),onChange:ev=>sup("fromId",ev.target.value)}),
+        e("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8}},Inp({label:"Amount",type:"number",value:sheet.d.amount,onChange:ev=>sup("amount",ev.target.value)}),Sel({label:"Currency",value:sheet.d.fromCurrency,options:Object.keys(CUR).map(c=>({value:c,label:c})),onChange:ev=>sup("fromCurrency",ev.target.value)})),
+        e("div",{style:{textAlign:"center",fontSize:20,color:"#ccc"}},"↓"),
+        Sel({label:"To",value:sheet.d.toId,options:S.accounts.map(a=>({value:a.id,label:a.name})),onChange:ev=>sup("toId",ev.target.value)}),
+        Sel({label:"To Currency",value:sheet.d.toCurrency,options:Object.keys(CUR).map(c=>({value:c,label:c})),onChange:ev=>sup("toCurrency",ev.target.value)}),
+        sheet.d.amount&&sheet.d.fromCurrency!==sheet.d.toCurrency&&e("div",{style:{background:"#f8f9fb",borderRadius:10,padding:12,textAlign:"center",fontSize:13}},"≈ "+fm(parseFloat(sheet.d.amount||0)*(FX[sheet.d.fromCurrency]||1)/(FX[sheet.d.toCurrency]||1),sheet.d.toCurrency)+" received"),
+        Inp({label:"Date",type:"date",value:sheet.d.date,onChange:ev=>sup("date",ev.target.value)}),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveXfer},"Transfer"))),
+
+    // Recurring
+    e(Sheet,{open:sheet?.t==="rec",onClose:()=>sSheet(null),title:"Recurring Rule"},
+      sheet?.t==="rec"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        Inp({label:"Name",type:"text",placeholder:"e.g. Netflix, Rent",value:sheet.d.name,onChange:ev=>sup("name",ev.target.value)}),
+        e("div",{style:{display:"flex",gap:6}},e("button",{className:"pill"+(sheet.d.type==="auto"?" on":""),onClick:()=>sup("type","auto")},"🤖 Auto"),e("button",{className:"pill"+(sheet.d.type==="manual"?" on":""),onClick:()=>sup("type","manual")},"🔔 Reminder")),
+        e("div",{style:{fontSize:11,color:"#888"}},sheet.d.type==="auto"?"Logs automatically on the day":"Shows reminder for you to confirm"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}},Inp({label:"Amount",type:"number",value:sheet.d.amount,onChange:ev=>sup("amount",ev.target.value)}),Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:c})),onChange:ev=>sup("currency",ev.target.value)}),Inp({label:"Day",type:"number",placeholder:"1-28",value:sheet.d.dayOfMonth,onChange:ev=>sup("dayOfMonth",ev.target.value)})),
+        Sel({label:"Category",value:sheet.d.categoryId,options:catSelOpts(S.catGroups||DGRP),onChange:ev=>sup("categoryId",ev.target.value)}),
+        Sel({label:"Account",value:sheet.d.accountId,options:S.accounts.map(a=>({value:a.id,label:a.name})),onChange:ev=>sup("accountId",ev.target.value)}),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveRec},"Save Rule"))),
+
+    // Debt Payment
+    e(Sheet,{open:sheet?.t==="dpmt",onClose:()=>sSheet(null),title:"Log Debt Payment"},
+      sheet?.t==="dpmt"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:"var(--purple)",marginBottom:4}},"Paying: "+(gA(sheet.d.accountId)?.name||"")),
+        e("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8}},Inp({label:"Amount",type:"number",placeholder:"0.00",value:sheet.d.amount,onChange:ev=>sup("amount",ev.target.value)}),Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:CUR[c]+" "+c})),onChange:ev=>sup("currency",ev.target.value)})),
+        Sel({label:"Pay From Account",value:sheet.d.fromAccountId,options:[{value:"",label:"— None (cash/external) —"},...S.accounts.filter(a=>a.type!=="credit_card"&&a.type!=="loan"&&a.type!=="tax").map(a=>({value:a.id,label:a.name}))],onChange:ev=>sup("fromAccountId",ev.target.value)}),
+        Inp({label:"Date",type:"date",value:sheet.d.date,onChange:ev=>sup("date",ev.target.value)}),
+        Inp({label:"Note",type:"text",value:sheet.d.note,onChange:ev=>sup("note",ev.target.value)}),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveDebtPmt},"Log Payment"))),
+
+    // Toast
+    toast&&e("div",{className:"toast-pop"},toast))
+}
+
+ReactDOM.render(e(App),document.getElementById("app"));
+</script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+</body>
+</html>

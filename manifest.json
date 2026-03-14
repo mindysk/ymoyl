@@ -1,0 +1,24 @@
+{
+  "name": "Your Money or Your Life",
+  "short_name": "YMOYL",
+  "description": "Life energy financial tracker based on YMOYL principles",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f5f8",
+  "theme_color": "#1B5E3B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
