@@ -106,13 +106,13 @@ const exportAll=(state)=>{dlCSV("ymoyl-full-backup-"+today()+".csv",[["YMOYL Ful
 
 /* ═══ HELPERS ═══ */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-const toS=(a,c)=>a*(FX[c]||1);
-const fm=(a,c="SGD")=>(CUR[c]||"")+(Math.abs(a)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const toS=(a,c)=>(parseFloat(a)||0)*(FX[c]||1);
+const fm=(a,c="SGD")=>{a=parseFloat(a)||0;return(CUR[c]||"")+Math.abs(a).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})};
 const fs=(iso)=>{const d=new Date(iso);return d.getDate()+" "+MO[d.getMonth()]};
 const today=()=>new Date().toISOString().slice(0,10);
 const tMonth=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
-const calcMin=(b,apr)=>Math.max(b*.03,25,b*(apr/100/12));
-const calcPay=(b,apr,mp)=>{if(mp<=0||b<=0)return{m:0,ti:0};let bal=b,mo=0,ti=0,mr=apr/100/12;while(bal>.01&&mo<600){const i=bal*mr;ti+=i;bal=bal+i-mp;mo++;if(bal<0)bal=0}return{m:mo,ti}};
+const calcMin=(b,apr)=>{b=parseFloat(b)||0;apr=parseFloat(apr)||0;return Math.max(b*.03,25,b*(apr/100/12))};
+const calcPay=(b,apr,mp)=>{b=parseFloat(b)||0;apr=parseFloat(apr)||0;mp=parseFloat(mp)||0;if(mp<=0||b<=0)return{m:0,ti:0};let bal=b,mo=0,ti=0,mr=apr/100/12;while(bal>.01&&mo<600){const i=bal*mr;ti+=i;bal=bal+i-mp;mo++;if(bal<0)bal=0}return{m:mo,ti}};
 
 /* ═══ STORAGE ═══ */
 const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
@@ -187,10 +187,10 @@ function App(){
   const fc=um(()=>flatCats(S.catGroups||DGRP),[S.catGroups]);
   const gC=id=>fc.find(c=>c.id===id)||{name:"Other",icon:"📌",color:"#90A4AE",groupName:"Other"};
 
-  const aBal=uc(acc=>{if(!acc)return 0;const tx=S.transactions.filter(t=>t.accountId===acc.id);
+  const aBal=uc(acc=>{if(!acc)return 0;const ib=parseFloat(acc.initialBalance)||0;const tx=S.transactions.filter(t=>t.accountId===acc.id);
     if(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax"){
-      return acc.initialBalance-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
-    return acc.initialBalance+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
+      return ib-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
+    return ib+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
 
   const pending=um(()=>{const td=today(),d=new Date(td);
     return S.recurringRules.filter(r=>r.active&&r.type==="manual"&&r.dayOfMonth===d.getDate()&&!S.transactions.find(t=>t.recurringId===r.id&&t.date===td))},[S.recurringRules,S.transactions]);
@@ -218,7 +218,7 @@ function App(){
 
   const minDebtPay=um(()=>debtAccs.reduce((s,a)=>{const b=aBal(a);if(b<=0)return s;
     if(a.type==="credit_card")return s+calcMin(b,a.apr||0);
-    return s+(a.monthlyPayment||0)},[debtAccs,aBal]),0);
+    return s+(a.monthlyPayment||0)},0),[debtAccs,aBal]);
 
   const availCash=um(()=>{
     if(S.settings.availableCashOverride!==null&&S.settings.availableCashOverride!==undefined&&S.settings.availableCashOverride!=="")return parseFloat(S.settings.availableCashOverride)||0;
