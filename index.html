@@ -107,7 +107,7 @@ const exportAll=(state)=>{dlCSV("ymoyl-full-backup-"+today()+".csv",[["YMOYL Ful
 /* ═══ HELPERS ═══ */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const toS=(a,c)=>(parseFloat(a)||0)*(FX[c]||1);
-const fm=(a,c="SGD")=>{a=parseFloat(a)||0;return(CUR[c]||"")+Math.abs(a).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})};
+const fm=(a,c="SGD")=>{a=parseFloat(a)||0;return(a<0?"-":"")+(CUR[c]||"")+Math.abs(a).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})};
 const fs=(iso)=>{const d=new Date(iso);return d.getDate()+" "+MO[d.getMonth()]};
 const today=()=>new Date().toISOString().slice(0,10);
 const tMonth=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")};
