@@ -188,15 +188,25 @@ function App(){
   const fc=um(()=>flatCats(S.catGroups||DGRP),[S.catGroups]);
   const gC=id=>fc.find(c=>c.id===id)||{name:"Other",icon:"📌",color:"#90A4AE",groupName:"Other"};
 
-  const aBal=uc(acc=>{if(!acc)return 0;const ib=parseFloat(acc.initialBalance)||0;const tx=S.transactions.filter(t=>t.accountId===acc.id);
+  const aBal=uc(acc=>{if(!acc)return 0;
+    /* For multi-currency accounts, sum all initial balances converted to SGD */
+    let ibSGD=0;
+    if(acc.multiCurrency&&acc.balances&&Object.keys(acc.balances).length>0){
+      Object.entries(acc.balances).forEach(([c,v])=>{ibSGD+=toS(parseFloat(v)||0,c)});
+    }else{ibSGD=toS(parseFloat(acc.initialBalance)||0,acc.currency||"SGD")}
+    const tx=S.transactions.filter(t=>t.accountId===acc.id);
     if(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax"){
-      return ib-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
-    return ib+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
+      return ibSGD-tx.reduce((s,t)=>{if(t.type==="payment"||t.type==="debt_payment")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);return s},0)}
+    return ibSGD+tx.reduce((s,t)=>{if(t.type==="income")return s+toS(t.amount,t.currency);if(t.type==="expense")return s-toS(t.amount,t.currency);if(t.type==="transfer_in")return s+toS(t.amount,t.currency);if(t.type==="transfer_out"||t.type==="payment"||t.type==="debt_payment")return s-toS(t.amount,t.currency);return s},0)},[S.transactions]);
 
   /* Multi-currency balance breakdown per account */
   const aBalByCur=uc(acc=>{if(!acc)return{};const tx=S.transactions.filter(t=>t.accountId===acc.id);
-    const m={};const ib=parseFloat(acc.initialBalance)||0;const pc=acc.currency||"SGD";
-    m[pc]=(m[pc]||0)+ib;
+    const m={};
+    /* Initial balances */
+    if(acc.multiCurrency&&acc.balances&&Object.keys(acc.balances).length>0){
+      Object.entries(acc.balances).forEach(([c,v])=>{m[c]=(m[c]||0)+(parseFloat(v)||0)});
+    }else{const pc=acc.currency||"SGD";m[pc]=(m[pc]||0)+(parseFloat(acc.initialBalance)||0)}
+    /* Apply transactions */
     tx.forEach(t=>{const c=t.currency||"SGD";const a=parseFloat(t.amount)||0;
       if(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax"){
         if(t.type==="payment"||t.type==="debt_payment")m[c]=(m[c]||0)-a;
@@ -246,7 +256,7 @@ function App(){
 
   /* ═══ SHEET OPENERS ═══ */
   const openTxn=(def={})=>sSheet({t:"txn",d:{amount:"",currency:"SGD",categoryId:"food",accountId:S.accounts[0]?.id||"",note:"",fulfillment:3,date:today(),txnType:"expense",...def}});
-  const openAcc=()=>sSheet({t:"acc",d:{name:"",type:"debit",currency:"SGD",initialBalance:0,creditLimit:0,apr:0,stmtDay:15,dueDay:5,monthlyPayment:0}});
+  const openAcc=(def)=>sSheet({t:"acc",d:{name:"",type:"debit",currency:"SGD",initialBalance:0,balances:{},multiCurrency:false,creditLimit:0,apr:0,stmtDay:15,dueDay:5,monthlyPayment:0,...(def||{})}});
   const openXfer=()=>sSheet({t:"xfer",d:{fromId:S.accounts[0]?.id||"",toId:S.accounts[1]?.id||"",amount:"",fromCurrency:"SGD",toCurrency:"SGD",date:today()}});
   const openRec=()=>sSheet({t:"rec",d:{name:"",amount:"",currency:"SGD",categoryId:"subscriptions",accountId:S.accounts[0]?.id||"",type:"auto",dayOfMonth:1,fulfillment:3,active:true}});
   const openDebtPmt=(acc)=>sSheet({t:"dpmt",d:{accountId:acc.id,amount:"",currency:acc.currency,date:today(),note:"Payment to "+acc.name,fromAccountId:S.accounts.find(a=>a.type==="debit"||a.type==="cash")?.id||""}});
@@ -257,7 +267,8 @@ function App(){
     upd(s=>({...s,transactions:d.id?s.transactions.map(x=>x.id===d.id?t:x):[t,...s.transactions]}));sSheet(null);flash("Logged!")};
 
   const saveAcc=()=>{const d=sheet.d;if(!d.name)return;
-    const a={...d,id:d.id||uid(),initialBalance:parseFloat(d.initialBalance)||0,creditLimit:parseFloat(d.creditLimit)||0,apr:parseFloat(d.apr)||0,stmtDay:parseInt(d.stmtDay)||15,dueDay:parseInt(d.dueDay)||5,monthlyPayment:parseFloat(d.monthlyPayment)||0};
+    const a={...d,id:d.id||uid(),initialBalance:parseFloat(d.initialBalance)||0,creditLimit:parseFloat(d.creditLimit)||0,apr:parseFloat(d.apr)||0,stmtDay:parseInt(d.stmtDay)||15,dueDay:parseInt(d.dueDay)||5,monthlyPayment:parseFloat(d.monthlyPayment)||0,
+      multiCurrency:!!d.multiCurrency,balances:d.balances||{}};
     upd(s=>({...s,accounts:d.id?s.accounts.map(x=>x.id===d.id?a:x):[...s.accounts,a]}));sSheet(null);flash(d.id?"Updated":"Added!")};
 
   const saveXfer=()=>{const d=sheet.d;const a=parseFloat(d.amount);if(!a||d.fromId===d.toId)return;
@@ -715,10 +726,37 @@ function App(){
     // Add Account
     e(Sheet,{open:sheet?.t==="acc",onClose:()=>sSheet(null),title:sheet?.d?.id?"Edit Account":"Add Account"},
       sheet?.t==="acc"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
-        Inp({label:"Account Name",type:"text",placeholder:"e.g. UOB Visa",value:sheet.d.name,onChange:ev=>sup("name",ev.target.value)}),
+        Inp({label:"Account Name",type:"text",placeholder:"e.g. DBS Multi-Currency, UOB Visa",value:sheet.d.name,onChange:ev=>sup("name",ev.target.value)}),
         Sel({label:"Type",value:sheet.d.type,options:AT.map(t=>({value:t.v,label:t.i+" "+t.l})),onChange:ev=>sup("type",ev.target.value)}),
-        Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:CUR[c]+" "+c})),onChange:ev=>sup("currency",ev.target.value)}),
-        Inp({label:(sheet.d.type==="credit_card"||sheet.d.type==="loan"||sheet.d.type==="tax")?"Current Balance Owed":"Current Balance",type:"number",value:sheet.d.initialBalance||"",onChange:ev=>sup("initialBalance",ev.target.value)}),
+
+        /* Multi-currency toggle */
+        (sheet.d.type==="debit"||sheet.d.type==="cash"||sheet.d.type==="investment")&&e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0"}},
+          e("label",{style:{fontSize:13,fontWeight:700,flex:1}},"Multi-currency account?"),
+          e("button",{className:"pill"+(sheet.d.multiCurrency?" on":""),onClick:()=>{
+            sSheet(p=>{const mc=!p.d.multiCurrency;const b=mc&&!Object.keys(p.d.balances||{}).length?{SGD:p.d.initialBalance||0}:(p.d.balances||{});
+              return{...p,d:{...p.d,multiCurrency:mc,balances:b}}})
+          }},sheet.d.multiCurrency?"Yes":"No")),
+
+        /* Single currency */
+        !sheet.d.multiCurrency&&e("div",null,
+          Sel({label:"Primary Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:CUR[c]+" "+c})),onChange:ev=>sup("currency",ev.target.value)}),
+          e("div",{style:{marginTop:8}},Inp({label:(sheet.d.type==="credit_card"||sheet.d.type==="loan"||sheet.d.type==="tax")?"Current Balance Owed":"Current Balance",type:"number",value:sheet.d.initialBalance||"",onChange:ev=>sup("initialBalance",ev.target.value)}))),
+
+        /* Multi-currency balances */
+        sheet.d.multiCurrency&&e("div",null,
+          e("div",{className:"lbl",style:{marginBottom:8}},"Balances by Currency"),
+          Object.entries(sheet.d.balances||{}).map(([cur,val])=>e("div",{key:cur,style:{display:"flex",gap:8,alignItems:"center",marginBottom:6}},
+            e("span",{style:{fontSize:14,fontWeight:800,minWidth:40}},cur),
+            e("input",{className:"inp",type:"number",value:val||"",placeholder:"0.00",style:{flex:1},
+              onChange:ev=>{const b={...(sheet.d.balances||{})};b[cur]=ev.target.value;sup("balances",b)}}),
+            e("button",{onClick:()=>{const b={...(sheet.d.balances||{})};delete b[cur];sup("balances",b)},
+              style:{background:"none",border:"none",cursor:"pointer",color:"var(--red)",fontSize:14}},"✕"))),
+          e("div",{style:{display:"flex",gap:6}},
+            Object.keys(CUR).filter(c=>!(sheet.d.balances||{})[c]).map(c=>
+              e("button",{key:c,className:"pill",style:{fontSize:12,padding:"5px 12px"},
+                onClick:()=>{const b={...(sheet.d.balances||{})};b[c]=0;sup("balances",b)}},
+                "+ "+CUR[c]+" "+c)))),
+
         sheet.d.type==="credit_card"&&Inp({label:"Credit Limit",type:"number",value:sheet.d.creditLimit||"",onChange:ev=>sup("creditLimit",ev.target.value)}),
         (sheet.d.type==="credit_card"||sheet.d.type==="loan")&&Inp({label:sheet.d.type==="loan"?"Interest Rate (%)":"APR (%)",type:"number",placeholder:sheet.d.type==="loan"?"e.g. 2.6":"e.g. 25.9",value:sheet.d.apr||"",onChange:ev=>sup("apr",ev.target.value)}),
         sheet.d.type==="credit_card"&&e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},Inp({label:"Statement Day",type:"number",value:sheet.d.stmtDay||"",onChange:ev=>sup("stmtDay",ev.target.value)}),Inp({label:"Due Day",type:"number",value:sheet.d.dueDay||"",onChange:ev=>sup("dueDay",ev.target.value)})),
