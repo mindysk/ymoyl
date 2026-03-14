@@ -420,7 +420,7 @@ function App(){
         e("div",{style:{fontSize:20,fontWeight:900}},"Transactions"),
         e("button",{className:"btn btn-s",style:{fontSize:12,padding:"8px 12px"},onClick:openRec},"🔄 Recurring")),
 
-      state.recurringRules.length>0&&e("div",{className:"card",style:{marginBottom:12,padding:14}},
+      S.recurringRules.length>0&&e("div",{className:"card",style:{marginBottom:12,padding:14}},
         e("div",{className:"lbl",style:{marginBottom:8}},"Recurring Rules"),
         S.recurringRules.map(r=>e("div",{key:r.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f2f5"}},
           e("div",null,e("div",{style:{fontSize:13,fontWeight:700}},r.name," ",e("span",{style:{fontSize:10,color:r.type==="auto"?"var(--green)":"var(--orange)",fontWeight:800,padding:"1px 6px",borderRadius:4,background:r.type==="auto"?"#E8F5E9":"#FFF3E0"}},r.type==="auto"?"Auto":"Manual")),e("div",{style:{fontSize:11,color:"#999"}},"Day "+r.dayOfMonth+" · "+(gA(r.accountId)?.name||"—"))),
