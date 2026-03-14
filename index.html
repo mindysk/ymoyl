@@ -370,7 +370,7 @@ function App(){
 
       // Add debt account button
       e("div",{style:{display:"flex",gap:6,marginBottom:14}},
-        e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>sSheet({t:"acc",d:{name:"",type:"credit_card",currency:"SGD",initialBalance:0,creditLimit:0,apr:0,stmtDay:15,dueDay:5,monthlyPayment:0}})},"+ Add Debt Account")),
+        e("button",{className:"btn btn-p",style:{flex:1,fontSize:13},onClick:()=>openAcc({type:"credit_card"})},"+ Add Debt Account")),
 
       // Credit Cards
       ccAccs.length>0&&e("div",{style:{marginBottom:16}},
