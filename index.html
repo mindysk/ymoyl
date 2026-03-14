@@ -118,8 +118,40 @@ const calcPay=(b,apr,mp)=>{b=parseFloat(b)||0;apr=parseFloat(apr)||0;mp=parseFlo
 const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 
 const DEF={accounts:[],catGroups:DGRP,transactions:[],recurringRules:[],debtPayments:{},
+  holdings:[],/* {id,ticker,name,shares,currency,market} e.g. {ticker:"AAPL",shares:10,currency:"USD",market:"US"} */
   settings:{monthlySalary:0,weeklyWorkHours:40,weeklyCommuteHours:5,weeklyPrepHours:3,monthlyWorkCosts:0,monthlyInvestmentIncome:0,paydayDate:27,availableCashOverride:null},
   monthlyIncome:{}};
+
+/* Stock price fetcher via Yahoo Finance */
+const PROXY="https://api.allorigins.win/raw?url=";
+const fetchPrices=async(tickers)=>{
+  if(!tickers.length)return{};
+  const symbols=tickers.join(",");
+  const url=PROXY+encodeURIComponent("https://query1.finance.yahoo.com/v7/finance/quote?symbols="+symbols+"&fields=regularMarketPrice,shortName,currency,regularMarketChange,regularMarketChangePercent");
+  try{
+    const r=await fetch(url);const j=await r.json();
+    const out={};
+    if(j.quoteResponse&&j.quoteResponse.result){
+      j.quoteResponse.result.forEach(q=>{out[q.symbol]={price:q.regularMarketPrice||0,name:q.shortName||q.symbol,currency:q.currency||"USD",change:q.regularMarketChange||0,changePct:q.regularMarketChangePercent||0}});
+    }
+    return out;
+  }catch(err){
+    /* Fallback: try individual fetches */
+    const out={};
+    for(const t of tickers){
+      try{
+        const u=PROXY+encodeURIComponent("https://query1.finance.yahoo.com/v7/finance/quote?symbols="+t);
+        const r=await fetch(u);const j=await r.json();
+        if(j.quoteResponse&&j.quoteResponse.result&&j.quoteResponse.result[0]){
+          const q=j.quoteResponse.result[0];
+          out[q.symbol]={price:q.regularMarketPrice||0,name:q.shortName||q.symbol,currency:q.currency||"USD",change:q.regularMarketChange||0,changePct:q.regularMarketChangePercent||0};
+        }
+      }catch{}
+    }
+    return out;
+  }
+};
+/* SGX tickers need .SI suffix for Yahoo Finance, e.g. D05.SI for DBS */
 
 /* ═══ TINY COMPONENTS ═══ */
 function PBar({value,max,color="#1B5E3B",h=8}){
@@ -161,6 +193,47 @@ function App(){
       if(r.type==="auto")nw.push({id:uid(),amount:r.amount,currency:r.currency,categoryId:r.categoryId,accountId:r.accountId,note:r.name+" (auto)",fulfillment:r.fulfillment||3,date:td,recurringId:r.id,type:"expense"})});
     if(nw.length)upd(s=>({...s,transactions:[...nw,...s.transactions]}))
   },[loading]);
+
+  /* ═══ PORTFOLIO ═══ */
+  const[prices,sPrices]=us({});
+  const[priceLoading,sPriceLoading]=us(false);
+  const[priceError,sPriceError]=us("");
+  const[lastFetch,sLastFetch]=us(null);
+
+  const refreshPrices=uc(async()=>{
+    const h=S.holdings||[];if(!h.length)return;
+    sPriceLoading(true);sPriceError("");
+    try{
+      const tickers=h.map(x=>x.ticker);
+      const p=await fetchPrices(tickers);
+      sPrices(p);sLastFetch(new Date().toLocaleTimeString());
+      /* Cache prices in localStorage */
+      LS.set("ymoyl-prices",{data:p,time:Date.now()});
+    }catch(err){sPriceError("Could not fetch prices")}
+    sPriceLoading(false);
+  },[S.holdings]);
+
+  /* Auto-fetch on load + every 15 min */
+  ue(()=>{
+    if(loading)return;
+    /* Load cached prices first */
+    const cached=LS.get("ymoyl-prices");
+    if(cached&&cached.data){sPrices(cached.data);sLastFetch("cached")}
+    /* Fetch fresh if holdings exist */
+    if((S.holdings||[]).length>0)refreshPrices();
+    const iv=setInterval(()=>{if((S.holdings||[]).length>0)refreshPrices()},15*60*1000);
+    return()=>clearInterval(iv);
+  },[loading,S.holdings?.length]);
+
+  /* Portfolio total in SGD */
+  const portfolioTotal=um(()=>{
+    return(S.holdings||[]).reduce((sum,h)=>{
+      const p=prices[h.ticker];if(!p)return sum;
+      const val=(parseFloat(h.shares)||0)*p.price;
+      const cur=p.currency||"USD";
+      return sum+toS(val,cur);
+    },0);
+  },[S.holdings,prices]);
 
   /* ═══ DERIVED ═══ */
   /* Monthly income = sum of all income transactions for that month */
@@ -256,6 +329,14 @@ function App(){
     if(d.fromAccountId){txns.push({id:uid(),amount:a,currency:d.currency,categoryId:"debt_payment",accountId:d.fromAccountId,note:"Paid "+gA(d.accountId)?.name,fulfillment:3,date:d.date,type:"payment"})}
     upd(s=>({...s,transactions:[...txns,...s.transactions]}));sSheet(null);flash("Payment logged!")};
 
+  const openHolding=(h)=>sSheet({t:"hold",d:h||{ticker:"",shares:"",market:"US"}});
+  const saveHolding=()=>{const d=sheet.d;if(!d.ticker)return;
+    const ticker=d.market==="SG"?d.ticker.toUpperCase()+(d.ticker.includes(".SI")?"":".SI"):d.ticker.toUpperCase();
+    const h={id:d.id||uid(),ticker,shares:parseFloat(d.shares)||0,market:d.market};
+    upd(s=>({...s,holdings:d.id?(s.holdings||[]).map(x=>x.id===d.id?h:x):[...(s.holdings||[]),h]}));
+    sSheet(null);flash("Holding saved!");setTimeout(()=>refreshPrices(),500)};
+  const delHolding=id=>{upd(s=>({...s,holdings:(s.holdings||[]).filter(x=>x.id!==id)}));flash("Removed")};
+
   const delTxn=id=>{upd(s=>({...s,transactions:s.transactions.filter(t=>t.id!==id)}));flash("Deleted")};
   const delAcc=id=>{upd(s=>({...s,accounts:s.accounts.filter(a=>a.id!==id),transactions:s.transactions.filter(t=>t.accountId!==id)}));sSelAcc(null);flash("Removed")};
 
@@ -309,6 +390,49 @@ function App(){
             e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,fontWeight:700}},c.groupName?c.groupName+" › "+c.name:c.name),e("span",{className:"mono",style:{fontSize:13,fontWeight:700}},fm(c.total))),
             e(PBar,{value:c.total,max:catBD[0]?.total||1,color:c.color,h:5}),
             e("div",{style:{display:"flex",justifyContent:"space-between",marginTop:3}},e("span",{style:{fontSize:10,color:"#999"}},c.count+" txn · Joy "+c.af.toFixed(1)),ler>0&&e("span",{style:{fontSize:10,color:"var(--orange)"}},(c.total/ler).toFixed(1)+"h"))))))),
+
+      /* Portfolio */
+      e("div",{className:"card",style:{marginBottom:12}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+          e("div",{className:"lbl",style:{marginBottom:0}},"📈 Investment Portfolio"),
+          e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+            lastFetch&&e("span",{style:{fontSize:10,color:"#bbb"}},priceLoading?"Updating...":"Updated "+lastFetch),
+            e("button",{className:"btn btn-s",style:{fontSize:11,padding:"5px 10px"},onClick:refreshPrices,disabled:priceLoading},priceLoading?"...":"↻"),
+            e("button",{className:"btn btn-p",style:{fontSize:11,padding:"5px 10px"},onClick:()=>openHolding()},"+"))),
+
+        portfolioTotal>0&&e("div",{style:{textAlign:"center",marginBottom:14,padding:14,background:"linear-gradient(135deg,var(--purple2),#9575CD)",borderRadius:12,color:"#fff"}},
+          e("div",{style:{fontSize:10,textTransform:"uppercase",letterSpacing:".08em",opacity:.8,marginBottom:2}},"Total Portfolio Value"),
+          e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},fm(portfolioTotal))),
+
+        priceError&&e("div",{style:{fontSize:12,color:"var(--red)",marginBottom:8,padding:"8px 12px",background:"#FFF0EE",borderRadius:8}},priceError),
+
+        (S.holdings||[]).length===0?e("div",{style:{textAlign:"center",padding:20,color:"#aaa",fontSize:13}},
+          e("div",{style:{fontSize:32,marginBottom:6}},"📊"),
+          "Add your holdings to track portfolio value.",
+          e("div",{style:{fontSize:11,marginTop:6,color:"#bbb"}},"US stocks: use ticker (AAPL, VOO). SGX: use code (D05 for DBS, ES3 for STI ETF)")):
+        (S.holdings||[]).map(h=>{
+          const p=prices[h.ticker];const shares=parseFloat(h.shares)||0;
+          const val=p?(shares*p.price):0;const valSGD=p?toS(val,p.currency||"USD"):0;
+          const isUp=p&&p.change>=0;
+          return e("div",{key:h.id,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:"1px solid #f0f2f5"}},
+            e("div",{style:{width:40,height:40,borderRadius:10,background:isUp?"#E8F5E9":"#FFF0EE",display:"flex",alignItems:"center",justifyContent:"center"}},
+              e("span",{style:{fontSize:12,fontWeight:800,color:isUp?"var(--green)":"var(--red)"}},isUp?"▲":"▼")),
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:14,fontWeight:800}},h.ticker),
+              e("div",{style:{fontSize:11,color:"#999"}},
+                p?p.name:"Loading...",
+                " · ",shares," shares")),
+            e("div",{style:{textAlign:"right"}},
+              p?e("div",null,
+                e("div",{className:"mono",style:{fontSize:14,fontWeight:700}},fm(val,p.currency||"USD")),
+                p.currency!=="SGD"&&e("div",{style:{fontSize:10,color:"#999"}},fm(valSGD)),
+                e("div",{style:{fontSize:10,color:isUp?"var(--green)":"var(--red)",fontWeight:700}},
+                  (isUp?"+":"")+p.changePct.toFixed(2)+"%")):
+              e("div",{style:{fontSize:12,color:"#bbb"}},"—")),
+            e("button",{onClick:()=>delHolding(h.id),style:{background:"none",border:"none",cursor:"pointer",color:"#ddd",fontSize:14,padding:4}},"✕"))
+        }),
+
+        e("div",{style:{marginTop:10,fontSize:10,color:"#bbb",textAlign:"center"}},"Prices from Yahoo Finance. SGX tickers auto-append .SI")),
 
     /* ═══ DEBT PAYOFF ═══ */
     tab==="debt"&&e("div",{className:"fade",style:{padding:"16px 16px 0"}},
@@ -620,6 +744,18 @@ function App(){
         Inp({label:"Date",type:"date",value:sheet.d.date,onChange:ev=>sup("date",ev.target.value)}),
         Inp({label:"Note",type:"text",value:sheet.d.note,onChange:ev=>sup("note",ev.target.value)}),
         e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveDebtPmt},"Log Payment"))),
+
+    // Add Holding
+    e(Sheet,{open:sheet?.t==="hold",onClose:()=>sSheet(null),title:"Add Investment Holding"},
+      sheet?.t==="hold"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+        e("div",{style:{display:"flex",gap:6,marginBottom:4}},
+          e("button",{className:"pill"+(sheet.d.market==="US"?" on":""),onClick:()=>sup("market","US")},"🇺🇸 US Stock"),
+          e("button",{className:"pill"+(sheet.d.market==="SG"?" on":""),onClick:()=>sup("market","SG")},"🇸🇬 SGX")),
+        Inp({label:sheet.d.market==="SG"?"SGX Code (e.g. D05 for DBS, ES3 for STI ETF)":"US Ticker (e.g. AAPL, VOO, MSFT)",type:"text",placeholder:sheet.d.market==="SG"?"D05":"AAPL",value:sheet.d.ticker,onChange:ev=>sup("ticker",ev.target.value)}),
+        Inp({label:"Number of Shares",type:"number",placeholder:"e.g. 100",value:sheet.d.shares,onChange:ev=>sup("shares",ev.target.value)}),
+        e("div",{style:{fontSize:11,color:"#888",background:"#f8f9fb",borderRadius:8,padding:10}},
+          sheet.d.market==="SG"?"SGX tickers get .SI appended automatically (e.g. D05 → D05.SI)":"Enter the exact ticker symbol as shown on Yahoo Finance"),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveHolding},"Save Holding"))),
 
     // Toast
     toast&&e("div",{className:"toast-pop"},toast))
