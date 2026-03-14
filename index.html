@@ -238,12 +238,12 @@ function App(){
   const loanAccs=um(()=>S.accounts.filter(a=>a.type==="loan"),[S.accounts]);
   const taxAccs=um(()=>S.accounts.filter(a=>a.type==="tax"),[S.accounts]);
 
-  const totalDebt=um(()=>debtAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[debtAccs,aBal]);
-  const ccDebt=um(()=>ccAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[ccAccs,aBal]);
-  const loanDebt=um(()=>loanAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[loanAccs,aBal]);
-  const taxDebt=um(()=>taxAccs.reduce((s,a)=>s+Math.max(aBal(a),0),0),[taxAccs,aBal]);
+  const totalDebt=um(()=>debtAccs.reduce((s,a)=>s+Math.abs(aBal(a)),0),[debtAccs,aBal]);
+  const ccDebt=um(()=>ccAccs.reduce((s,a)=>s+Math.abs(aBal(a)),0),[ccAccs,aBal]);
+  const loanDebt=um(()=>loanAccs.reduce((s,a)=>s+Math.abs(aBal(a)),0),[loanAccs,aBal]);
+  const taxDebt=um(()=>taxAccs.reduce((s,a)=>s+Math.abs(aBal(a)),0),[taxAccs,aBal]);
 
-  const minDebtPay=um(()=>debtAccs.reduce((s,a)=>{const b=aBal(a);if(b<=0)return s;
+  const minDebtPay=um(()=>debtAccs.reduce((s,a)=>{const b=Math.abs(aBal(a));if(b<=0)return s;
     if(a.type==="credit_card")return s+calcMin(b,a.apr||0);
     return s+(a.monthlyPayment||0)},0),[debtAccs,aBal]);
 
@@ -375,7 +375,7 @@ function App(){
       // Credit Cards
       ccAccs.length>0&&e("div",{style:{marginBottom:16}},
         ccAccs.map(acc=>{
-          const bal=aBal(acc),mp=calcMin(bal,acc.apr||0),mi=bal*(acc.apr||0)/100/12;
+          const bal=Math.abs(aBal(acc)),mp=calcMin(bal,acc.apr||0),mi=bal*(acc.apr||0)/100/12;
           const paid=debtPmtsThisMonth(acc.id);
           const pm=mp>0?calcPay(bal,acc.apr,mp):null;
           const dblAmt=Math.round(mp*2*100)/100;
@@ -438,7 +438,7 @@ function App(){
       // Loans
       loanAccs.length>0&&e("div",{style:{marginBottom:16}},
         loanAccs.map(acc=>{
-          const bal=aBal(acc),mi=bal*(acc.apr||0)/100/12,prin=(acc.monthlyPayment||0)-mi;
+          const bal=Math.abs(aBal(acc)),mi=bal*(acc.apr||0)/100/12,prin=(acc.monthlyPayment||0)-mi;
           const paid=debtPmtsThisMonth(acc.id);
           return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
@@ -455,7 +455,7 @@ function App(){
       // Tax
       taxAccs.length>0&&e("div",{style:{marginBottom:16}},
         taxAccs.map(acc=>{
-          const bal=aBal(acc);
+          const bal=Math.abs(aBal(acc));
           return e("div",{key:acc.id,className:"card",style:{marginBottom:12}},
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
               e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:20}},"🏛"),e("span",{style:{fontSize:16,fontWeight:800}},acc.name)),
@@ -499,7 +499,7 @@ function App(){
 
       e("div",{className:"card",style:{marginBottom:14,textAlign:"center",background:"linear-gradient(135deg,var(--green),var(--green2))",color:"#fff"}},
         e("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",opacity:.8,marginBottom:4}},"Net Worth"),
-        e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},fm(S.accounts.reduce((s,a)=>{const b=aBal(a);return s+(a.type==="credit_card"||a.type==="loan"||a.type==="tax"?-b:b)},0)))),
+        e("div",{className:"mono",style:{fontSize:28,fontWeight:700}},fm(S.accounts.reduce((s,a)=>{const b=aBal(a);return s+(a.type==="credit_card"||a.type==="loan"||a.type==="tax"?-Math.abs(b):b)},0)))),
 
       AT.map(at=>{const accs=S.accounts.filter(a=>a.type===at.v);if(!accs.length)return null;
         return e("div",{key:at.v,style:{marginBottom:16}},
@@ -524,7 +524,7 @@ function App(){
     /* ═══ ACCOUNT DETAIL ═══ */
     tab==="accounts"&&selAcc&&(()=>{
       const acc=gA(selAcc);if(!acc){sSelAcc(null);return null}
-      const bal=aBal(acc),at=AT.find(t=>t.v===acc.type)||AT[0];
+      const rawBal=aBal(acc),bal=(acc.type==="credit_card"||acc.type==="loan"||acc.type==="tax")?Math.abs(rawBal):rawBal,at=AT.find(t=>t.v===acc.type)||AT[0];
       const accTx=S.transactions.filter(t=>t.accountId===acc.id).sort((a,b)=>b.date.localeCompare(a.date));
       const isCC=acc.type==="credit_card",isL=acc.type==="loan";
       const mp=isCC?calcMin(bal,acc.apr):0,mi=(isCC||isL)?bal*((parseFloat(acc.apr)||0)/100/12):0;
