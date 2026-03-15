@@ -325,6 +325,15 @@ function App(){
             e("span",{className:"mono",style:{fontWeight:700,fontSize:13}},fm(r.amount,r.currency)),
             e("button",{className:"btn btn-p",style:{padding:"4px 12px",fontSize:11},onClick:()=>{upd(s=>({...s,transactions:[{id:uid(),amount:r.amount,currency:r.currency,categoryId:r.categoryId,accountId:r.accountId,note:r.name,fulfillment:r.fulfillment||3,date:today(),type:"expense",recurringId:r.id},...s.transactions]}));flash(r.name+" logged")}},"Pay"))))),
 
+      // Backup reminder
+      (()=>{const lb=LS.get("ymoyl-last-backup");const overdue=!lb||(Date.now()-lb>3*24*3600*1000);
+        return overdue&&S.transactions.length>0?e("div",{className:"card",style:{background:"#FFF0EE",border:"1px solid #FFCDD2",marginBottom:12,padding:12,display:"flex",alignItems:"center",justifyContent:"space-between"}},
+          e("div",null,e("div",{style:{fontSize:12,fontWeight:700,color:"var(--red)"}},"⚠ Backup your data"),e("div",{style:{fontSize:11,color:"#888"}},lb?"Last: "+new Date(lb).toLocaleDateString():"Never backed up")),
+          e("button",{className:"btn btn-p",style:{padding:"6px 14px",fontSize:11},onClick:()=>{
+            const data=JSON.stringify(S,null,2);const blob=new Blob([data],{type:"application/json"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ymoyl-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href);
+            LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")}},"Backup")):null})(),
+
       // Month nav
       e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:14}},
         e("div",{style:{flex:1,display:"flex",alignItems:"center",gap:8,background:"#fff",borderRadius:10,padding:"8px 14px",border:"1px solid var(--border)"}},e("span",{style:{fontSize:14}},"📅"),e("span",{style:{fontSize:14,fontWeight:700}},MO[parseInt(vm.split("-")[1])-1]+" "+vm.split("-")[0])),
@@ -715,12 +724,41 @@ function App(){
           e("button",{className:"btn btn-s",style:{fontSize:11,padding:"6px 12px"},onClick:()=>{const el=document.getElementById("ngrp");const n=el.value.trim();if(!n)return;const ic=prompt("Emoji icon for group:","📁")||"📁";upd(s=>({...s,catGroups:[...s.catGroups,{id:uid(),name:n,icon:ic,color:"#78909C",subs:[]}]}));el.value="";flash("Group added")}},"Add Group"))),
 
       e("div",{className:"card",style:{marginBottom:12}},
-        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--teal)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}},"📤 Export Data"),
-        e("div",{style:{fontSize:11,color:"#888",marginBottom:10}},"Download your data as CSV for safekeeping or analysis."),
+        e("div",{style:{fontSize:12,fontWeight:800,color:"var(--teal)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}},"💾 Backup & Restore"),
+        e("div",{style:{fontSize:11,color:"#888",marginBottom:6,lineHeight:1.5}},"Safari can delete PWA data after 7 days. Back up regularly to keep your data safe!"),
+
+        /* Last backup indicator */
+        (()=>{const lb=LS.get("ymoyl-last-backup");
+          return e("div",{style:{fontSize:12,marginBottom:10,padding:"8px 12px",borderRadius:8,background:lb?(Date.now()-lb>3*24*3600*1000?"#FFF0EE":"#E8F5E9"):"#FFF8E1",border:"1px solid "+(lb?(Date.now()-lb>3*24*3600*1000?"#FFCDD2":"#A5D6A7"):"#FFE082")}},
+            lb?("Last backup: "+new Date(lb).toLocaleDateString()+" "+new Date(lb).toLocaleTimeString()+(Date.now()-lb>3*24*3600*1000?" ⚠ Overdue!":"  ✓")):"⚠ No backup yet — back up now!")})(),
+
         e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
-          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportTxns(S.transactions,S.catGroups||DGRP,S.accounts);flash("Transactions exported!")}},"📋 Export Transactions (CSV)"),
-          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportAccounts(S.accounts);flash("Accounts exported!")}},"🏦 Export Accounts (CSV)"),
-          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{exportAll(S);flash("Full backup exported!")}},"💾 Export Full Backup (JSON in CSV)"))),
+          /* JSON Backup */
+          e("button",{className:"btn btn-p",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{
+            const data=JSON.stringify(S,null,2);const blob=new Blob([data],{type:"application/json"});
+            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ymoyl-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href);
+            LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")
+          }},"⬇ Download Backup (.json)"),
+
+          /* Restore */
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{
+            const inp=document.createElement("input");inp.type="file";inp.accept=".json";
+            inp.onchange=ev=>{const f=ev.target.files[0];if(!f)return;
+              const r=new FileReader();r.onload=re=>{
+                try{const d=JSON.parse(re.target.result);
+                  if(!d.accounts&&!d.transactions){flash("Invalid backup file");return}
+                  if(!confirm("This will replace ALL current data. Continue?"))return;
+                  upd(()=>({...DEF,...d}));flash("Data restored!")}
+                catch(e){flash("Error reading file")}};
+              r.readAsText(f)};
+            inp.click()
+          }},"⬆ Restore from Backup (.json)"),
+
+          /* CSV exports */
+          e("div",{style:{borderTop:"1px solid #eee",paddingTop:8,marginTop:4}}),
+          e("div",{style:{fontSize:11,color:"#888",marginBottom:4}},"CSV exports (for spreadsheets):"),
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:12,textAlign:"left"},onClick:()=>{exportTxns(S.transactions,S.catGroups||DGRP,S.accounts);flash("Exported!")}},"📋 Transactions CSV"),
+          e("button",{className:"btn btn-s",style:{width:"100%",fontSize:12,textAlign:"left"},onClick:()=>{exportAccounts(S.accounts);flash("Exported!")}},"🏦 Accounts CSV"))),
 
       e("div",{className:"card",style:{marginBottom:12}},
         e("div",{style:{fontSize:12,fontWeight:800,color:"var(--red)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}},"⚠ Data"),
