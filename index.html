@@ -73,19 +73,25 @@ const FC=["","#E8453C","#E8883C","#E8C93C","#4CAF50","#7E57C2"];
 const AT=[{v:"credit_card",l:"Credit Card",i:"💳",c:"#E8453C"},{v:"debit",l:"Debit",i:"🏦",c:"#2196F3"},{v:"cash",l:"Cash",i:"💵",c:"#4CAF50"},{v:"loan",l:"Loan / Mortgage",i:"🏠",c:"#FF9800"},{v:"investment",l:"Investment",i:"📈",c:"#7E57C2"},{v:"tax",l:"Tax Owed",i:"🏛",c:"#78909C"}];
 const DGRP=[
 {id:"g_essentials",name:"Essentials",icon:"🏠",color:"#5C6BC0",subs:[
-  {id:"housing",name:"Housing"},{id:"utilities",name:"Utilities"},{id:"insurance",name:"Insurance"},{id:"health",name:"Health"}]},
-{id:"g_daily",name:"Daily Living",icon:"🍜",color:"#EF5350",subs:[
-  {id:"food",name:"Food & Dining"},{id:"transport",name:"Transport"},{id:"personal",name:"Personal Care"}]},
+  {id:"rent",name:"Rent"},{id:"utilities",name:"Utilities"},{id:"insurance",name:"Insurance"},{id:"health",name:"Health"},{id:"phone",name:"Phone"},{id:"internet",name:"Internet"},{id:"home_improvements",name:"Home improvements"}]},
+{id:"g_daily",name:"Daily Living",icon:"☕",color:"#EF5350",subs:[
+  {id:"groceries",name:"Groceries"},{id:"coffee_shops",name:"Coffee shops"}]},
 {id:"g_lifestyle",name:"Lifestyle",icon:"🎬",color:"#FFA726",subs:[
-  {id:"shopping",name:"Shopping"},{id:"entertainment",name:"Entertainment"},{id:"travel",name:"Travel"},{id:"education",name:"Education"}]},
+  {id:"shopping_general",name:"Shopping"},{id:"entertainment",name:"Entertainment"},{id:"travel_lifestyle",name:"Travel"},{id:"education_lifestyle",name:"Education"},{id:"eating_out_friends",name:"Eating out with friends"},{id:"gym_classes",name:"Gym classes"}]},
 {id:"g_family",name:"Family",icon:"👨‍👩‍👧",color:"#EC407A",subs:[
-  {id:"childcare",name:"Childcare"},{id:"school_fees",name:"School Fees"},{id:"family_gifts",name:"Family Gifts"},{id:"family_other",name:"Family Other"}]},
+  {id:"family_commute",name:"Family commute"},{id:"family_education",name:"Education"},{id:"family_gifts",name:"Family Gifts"},{id:"mom",name:"Mom"},{id:"eating_out_family",name:"Eating out with family"}]},
 {id:"g_giving",name:"Giving",icon:"🎁",color:"#FF7043",subs:[
-  {id:"gifts",name:"Gifts"},{id:"donations",name:"Donations"}]},
+  {id:"gifts",name:"Gifts"}]},
 {id:"g_finance",name:"Finance",icon:"💰",color:"#541346",subs:[
-  {id:"debt_payment",name:"Debt Payment"},{id:"subscriptions",name:"Subscriptions"},{id:"transfer",name:"Transfer"}]},
+  {id:"debt_payment",name:"Debt Payment"},{id:"transfer",name:"Transfer"},{id:"taxes",name:"Taxes"},{id:"mortgage",name:"Mortgage"}]},
 {id:"g_other",name:"Other",icon:"📌",color:"#90A4AE",subs:[
-  {id:"other",name:"Other"}]}
+  {id:"other",name:"Other"}]},
+{id:"g_shopping",name:"Shopping",icon:"🛍",color:"#AB47BC",subs:[
+  {id:"clothes",name:"Clothes"},{id:"shoes",name:"Shoes"},{id:"beauty_products",name:"Beauty products"},{id:"bags",name:"Bags"},{id:"electronics",name:"Electronics"},{id:"special_occasions",name:"Special occasions"},{id:"home_goods",name:"Home goods"}]},
+{id:"g_travel",name:"Travel",icon:"🏖",color:"#29B6F6",subs:[
+  {id:"flights",name:"Flights"},{id:"travel_meals",name:"Meals"},{id:"travel_commute",name:"Commute"},{id:"experiences",name:"Experiences"}]},
+{id:"g_transport",name:"Transport",icon:"🚗",color:"#E8453C",subs:[
+  {id:"public_transport",name:"Public transport"},{id:"rideshare",name:"Rideshare"},{id:"gas",name:"Gas"},{id:"toll",name:"Toll"},{id:"parking_fees",name:"Parking fees"}]}
 ];
 /* Flatten for lookups — gC will resolve group+sub */
 const flatCats=(groups)=>{const out=[];groups.forEach(g=>g.subs.forEach(s=>out.push({id:s.id,name:s.name,groupId:g.id,groupName:g.name,icon:g.icon,color:g.color})));return out};
@@ -93,8 +99,7 @@ const flatCats=(groups)=>{const out=[];groups.forEach(g=>g.subs.forEach(s=>out.p
 const catSelOpts=(groups)=>{const o=[];groups.forEach(g=>{o.push({value:"__grp_"+g.id,label:"── "+g.icon+" "+g.name+" ──",disabled:true});g.subs.forEach(s=>o.push({value:s.id,label:"    "+s.name}))});return o};
 /* CSV export */
 const dlCSV=(filename,rows)=>{const esc=v=>{const s=String(v??"");return s.includes(",")||s.includes('"')||s.includes("\n")?'"'+s.replace(/"/g,'""')+'"':s};
-  const csv=rows.map(r=>r.map(esc).join(",")).join("\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href)};
+  const csv=rows.map(r=>r.map(esc).join(",")).join("\n");dlFile(filename,"\uFEFF"+csv,"text/csv;charset=utf-8")};
 const exportTxns=(txns,groups,accounts)=>{const fc=flatCats(groups);const hdr=["Date","Type","Amount","Currency","Amount SGD","Category Group","Category","Account","Note","Fulfillment","Life Energy Hrs"];
   const rows=[hdr,...txns.map(t=>{const c=fc.find(x=>x.id===t.categoryId)||{};const a=accounts.find(x=>x.id===t.accountId);
     return[t.date,t.type,t.amount,t.currency,toS(t.amount,t.currency).toFixed(2),c.groupName||"",c.name||"",a?.name||"",t.note||"",t.fulfillment||"",t.lifeEnergyHrs||""]})];
@@ -114,10 +119,26 @@ const tMonth=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMont
 const calcMin=(b,apr)=>{b=parseFloat(b)||0;apr=parseFloat(apr)||0;return Math.max(b*.03,25,b*(apr/100/12))};
 const calcPay=(b,apr,mp)=>{b=parseFloat(b)||0;apr=parseFloat(apr)||0;mp=parseFloat(mp)||0;if(mp<=0||b<=0)return{m:0,ti:0};let bal=b,mo=0,ti=0,mr=apr/100/12;while(bal>.01&&mo<600){const i=bal*mr;ti+=i;bal=bal+i-mp;mo++;if(bal<0)bal=0}return{m:mo,ti}};
 
+/* Safari-friendly file download — tries Web Share API first (shows iOS share sheet), falls back to link */
+const dlFile=async(filename,content,type)=>{
+  const blob=new Blob([content],{type});const file=new File([blob],filename,{type});
+  /* Try Web Share API (works great in iOS Safari/PWA) */
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:filename});return true}catch{return false}}
+  /* Fallback: create link */
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;
+  a.style.display="none";document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href)},2000);return true};
+const dlJSON=async(filename,obj)=>dlFile(filename,JSON.stringify(obj,null,2),"application/json");
+
 /* ═══ STORAGE ═══ */
 const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 
 const DEF={accounts:[],catGroups:DGRP,transactions:[],recurringRules:[],debtPayments:{},
+  /* budgets: {groupId:{amount:1200,subs:{food:800,transport:200}}} */
+  budgets:{},
+  /* monthlyBudgetOverrides: {"2026-03":{groupId:{amount:1500,subs:{food:900}}}} */
+  budgetOverrides:{},
   settings:{monthlySalary:0,weeklyWorkHours:40,weeklyCommuteHours:5,weeklyPrepHours:3,monthlyWorkCosts:0,monthlyInvestmentIncome:0,paydayDate:27,availableCashOverride:null},
   monthlyIncome:{}};
 
@@ -329,10 +350,9 @@ function App(){
       (()=>{const lb=LS.get("ymoyl-last-backup");const overdue=!lb||(Date.now()-lb>3*24*3600*1000);
         return overdue&&S.transactions.length>0?e("div",{className:"card",style:{background:"#FFF0EE",border:"1px solid #FFCDD2",marginBottom:12,padding:12,display:"flex",alignItems:"center",justifyContent:"space-between"}},
           e("div",null,e("div",{style:{fontSize:12,fontWeight:700,color:"var(--red)"}},"⚠ Backup your data"),e("div",{style:{fontSize:11,color:"#888"}},lb?"Last: "+new Date(lb).toLocaleDateString():"Never backed up")),
-          e("button",{className:"btn btn-p",style:{padding:"6px 14px",fontSize:11},onClick:()=>{
-            const data=JSON.stringify(S,null,2);const blob=new Blob([data],{type:"application/json"});
-            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ymoyl-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href);
-            LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")}},"Backup")):null})(),
+          e("button",{className:"btn btn-p",style:{padding:"6px 14px",fontSize:11},onClick:async()=>{
+            const ok=await dlJSON("ymoyl-backup-"+today()+".json",S);
+            if(ok){LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")}else{flash("Backup cancelled")}}},"Backup")):null})(),
 
       // Month nav
       e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:14}},
@@ -364,6 +384,62 @@ function App(){
             e("div",{style:{display:"flex",justifyContent:"space-between"}},e("span",{style:{fontSize:13,fontWeight:700}},c.groupName?c.groupName+" › "+c.name:c.name),e("span",{className:"mono",style:{fontSize:13,fontWeight:700}},fm(c.total))),
             e(PBar,{value:c.total,max:catBD[0]?.total||1,color:c.color,h:5}),
             e("div",{style:{display:"flex",justifyContent:"space-between",marginTop:3}},e("span",{style:{fontSize:10,color:"#999"}},c.count+" txn · Joy "+c.af.toFixed(1)),ler>0&&e("span",{style:{fontSize:10,color:"var(--orange)"}},(c.total/ler).toFixed(1)+"h")))))),
+
+      /* Budget vs Actual */
+      (()=>{
+        const groups=S.catGroups||DGRP;
+        const bDef=S.budgets||{};
+        const bOver=(S.budgetOverrides||{})[vm]||{};
+        /* Merge: override takes priority over default */
+        const getBudget=(gid)=>{const o=bOver[gid],d=bDef[gid];return o?{amount:parseFloat(o.amount)||0,subs:o.subs||{}}:d?{amount:parseFloat(d.amount)||0,subs:d.subs||{}}:null};
+        /* Actual spending per group */
+        const spendByGroup={};const spendBySub={};
+        mTx.filter(t=>t.type==="expense").forEach(t=>{
+          const cat=fc.find(c=>c.id===t.categoryId);if(!cat)return;
+          const gid=cat.groupId;const sid=t.categoryId;
+          spendByGroup[gid]=(spendByGroup[gid]||0)+toS(t.amount,t.currency);
+          spendBySub[sid]=(spendBySub[sid]||0)+toS(t.amount,t.currency)});
+        const hasAnyBudget=groups.some(g=>getBudget(g.id));
+        const totalBudget=groups.reduce((s,g)=>{const b=getBudget(g.id);return s+(b?b.amount:0)},0);
+        const totalSpent=Object.values(spendByGroup).reduce((a,b)=>a+b,0);
+
+        return e("div",{className:"card",style:{marginBottom:12}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+            e("div",{className:"lbl",style:{marginBottom:0}},"📊 Budget vs Actual"),
+            e("button",{className:"btn btn-s",style:{fontSize:11,padding:"5px 10px"},onClick:()=>sSheet({t:"budget",d:{}})},"Edit")),
+
+          /* Total budget bar */
+          hasAnyBudget&&e("div",{style:{marginBottom:14}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
+              e("span",{style:{fontSize:13,fontWeight:800}},"Total"),
+              e("span",{className:"mono",style:{fontSize:13,fontWeight:700,color:totalSpent>totalBudget?"var(--red)":"var(--green)"}},fm(totalSpent)+" / "+fm(totalBudget))),
+            e(PBar,{value:totalSpent,max:totalBudget||1,color:totalSpent>totalBudget?"var(--red)":"var(--green)",h:6}),
+            e("div",{style:{fontSize:10,color:totalSpent>totalBudget?"var(--red)":"#999",marginTop:2,textAlign:"right"}},
+              totalSpent>totalBudget?"Over by "+fm(totalSpent-totalBudget):fm(totalBudget-totalSpent)+" remaining")),
+
+          /* Per group */
+          groups.map(g=>{
+            const b=getBudget(g.id);if(!b||b.amount<=0)return null;
+            const spent=spendByGroup[g.id]||0;const pct=b.amount>0?(spent/b.amount*100):0;const over=spent>b.amount;
+            return e("div",{key:g.id,style:{padding:"10px 0",borderTop:"1px solid #f0f2f5"}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:4}},
+                e("span",{style:{fontSize:16}},g.icon),
+                e("span",{style:{fontSize:13,fontWeight:700,flex:1}},g.name),
+                e("span",{className:"mono",style:{fontSize:12,fontWeight:700,color:over?"var(--red)":"var(--text)"}},fm(spent)),
+                e("span",{style:{fontSize:11,color:"#999"}}," / "+fm(b.amount))),
+              e(PBar,{value:spent,max:b.amount,color:over?"var(--red)":pct>80?"var(--orange)":"var(--green)",h:5}),
+              /* Sub-category breakdown if subs have budgets */
+              Object.keys(b.subs||{}).length>0&&e("div",{style:{paddingLeft:24,marginTop:6}},
+                g.subs.map(sub=>{
+                  const sb=parseFloat((b.subs||{})[sub.id])||0;if(!sb)return null;
+                  const ss=spendBySub[sub.id]||0;const so=ss>sb;
+                  return e("div",{key:sub.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:4}},
+                    e("span",{style:{fontSize:11,flex:1,color:"#666"}},sub.name),
+                    e("span",{className:"mono",style:{fontSize:10,fontWeight:700,color:so?"var(--red)":"#888"}},fm(ss)+" / "+fm(sb)),
+                    e("div",{style:{width:50}},e(PBar,{value:ss,max:sb,color:so?"var(--red)":"var(--green)",h:3})))})))}),
+
+          !hasAnyBudget&&e("div",{style:{textAlign:"center",padding:16,color:"#aaa",fontSize:13}},
+            "No budgets set. Tap Edit to set monthly spending limits."))})(),
     ),/* end home tab */
 
     /* ═══ DEBT PAYOFF ═══ */
@@ -505,7 +581,7 @@ function App(){
         e("div",{className:"lbl",style:{marginBottom:8}},"Recurring Rules"),
         S.recurringRules.map(r=>e("div",{key:r.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f2f5"}},
           e("div",null,e("div",{style:{fontSize:13,fontWeight:700}},r.name," ",e("span",{style:{fontSize:10,color:r.type==="auto"?"var(--green)":"var(--orange)",fontWeight:800,padding:"1px 6px",borderRadius:4,background:r.type==="auto"?"#E8F5E9":"#FFF3E0"}},r.type==="auto"?"Auto":"Manual")),e("div",{style:{fontSize:11,color:"#999"}},"Day "+r.dayOfMonth+" · "+(gA(r.accountId)?.name||"—"))),
-          e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{className:"mono",style:{fontWeight:700,fontSize:13}},fm(r.amount,r.currency)),e("button",{onClick:()=>{upd(s=>({...s,recurringRules:s.recurringRules.filter(x=>x.id!==r.id)}));flash("Removed")},style:{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:16}},"✕"))))),
+          e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{className:"mono",style:{fontWeight:700,fontSize:13}},fm(r.amount,r.currency)),e("button",{onClick:()=>sSheet({t:"rec",d:{...r}}),style:{background:"none",border:"none",cursor:"pointer",color:"#888",fontSize:14}},"✎"),e("button",{onClick:()=>{upd(s=>({...s,recurringRules:s.recurringRules.filter(x=>x.id!==r.id)}));flash("Removed")},style:{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:16}},"✕"))))),
 
       e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},
         e("button",{onClick:()=>shiftM(-1),style:{width:28,height:28,borderRadius:6,background:"#fff",border:"1px solid var(--border)",cursor:"pointer",fontSize:14}},"‹"),
@@ -734,10 +810,9 @@ function App(){
 
         e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
           /* JSON Backup */
-          e("button",{className:"btn btn-p",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:()=>{
-            const data=JSON.stringify(S,null,2);const blob=new Blob([data],{type:"application/json"});
-            const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ymoyl-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href);
-            LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")
+          e("button",{className:"btn btn-p",style:{width:"100%",fontSize:13,textAlign:"left"},onClick:async()=>{
+            const ok=await dlJSON("ymoyl-backup-"+today()+".json",S);
+            if(ok){LS.set("ymoyl-last-backup",Date.now());flash("Backup saved!")}else{flash("Backup cancelled")}
           }},"⬇ Download Backup (.json)"),
 
           /* Restore */
@@ -746,9 +821,9 @@ function App(){
             inp.onchange=ev=>{const f=ev.target.files[0];if(!f)return;
               const r=new FileReader();r.onload=re=>{
                 try{const d=JSON.parse(re.target.result);
-                  if(!d.accounts&&!d.transactions){flash("Invalid backup file");return}
-                  if(!confirm("This will replace ALL current data. Continue?"))return;
-                  upd(()=>({...DEF,...d}));flash("Data restored!")}
+                  if(typeof d!=="object"||Array.isArray(d)||(!d.accounts&&!d.transactions&&!d.catGroups&&!d.settings)){flash("Not a valid YMOYL backup");return}
+                  if(!confirm("This will replace ALL current data with the backup. Continue?"))return;
+                  upd(()=>({...DEF,...d}));flash("Data restored! "+((d.transactions||[]).length)+" transactions loaded")}
                 catch(e){flash("Error reading file")}};
               r.readAsText(f)};
             inp.click()
@@ -839,7 +914,7 @@ function App(){
         e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveXfer},"Transfer"))),
 
     // Recurring
-    e(Sheet,{open:sheet?.t==="rec",onClose:()=>sSheet(null),title:"Recurring Rule"},
+    e(Sheet,{open:sheet?.t==="rec",onClose:()=>sSheet(null),title:sheet?.d?.id?"Edit Recurring Rule":"New Recurring Rule"},
       sheet?.t==="rec"&&e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
         Inp({label:"Name",type:"text",placeholder:"e.g. Netflix, Rent",value:sheet.d.name,onChange:ev=>sup("name",ev.target.value)}),
         e("div",{style:{display:"flex",gap:6}},e("button",{className:"pill"+(sheet.d.type==="auto"?" on":""),onClick:()=>sup("type","auto")},"🤖 Auto"),e("button",{className:"pill"+(sheet.d.type==="manual"?" on":""),onClick:()=>sup("type","manual")},"🔔 Reminder")),
@@ -847,7 +922,7 @@ function App(){
         e("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}},Inp({label:"Amount",type:"number",value:sheet.d.amount,onChange:ev=>sup("amount",ev.target.value)}),Sel({label:"Currency",value:sheet.d.currency,options:Object.keys(CUR).map(c=>({value:c,label:c})),onChange:ev=>sup("currency",ev.target.value)}),Inp({label:"Day",type:"number",placeholder:"1-28",value:sheet.d.dayOfMonth,onChange:ev=>sup("dayOfMonth",ev.target.value)})),
         Sel({label:"Category",value:sheet.d.categoryId,options:catSelOpts(S.catGroups||DGRP),onChange:ev=>sup("categoryId",ev.target.value)}),
         Sel({label:"Account",value:sheet.d.accountId,options:S.accounts.map(a=>({value:a.id,label:a.name})),onChange:ev=>sup("accountId",ev.target.value)}),
-        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveRec},"Save Rule"))),
+        e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveRec},sheet.d.id?"Update Rule":"Save Rule"))),
 
     // Debt Payment
     e(Sheet,{open:sheet?.t==="dpmt",onClose:()=>sSheet(null),title:"Log Debt Payment"},
@@ -858,6 +933,66 @@ function App(){
         Inp({label:"Date",type:"date",value:sheet.d.date,onChange:ev=>sup("date",ev.target.value)}),
         Inp({label:"Note",type:"text",value:sheet.d.note,onChange:ev=>sup("note",ev.target.value)}),
         e("button",{className:"btn btn-p",style:{width:"100%"},onClick:saveDebtPmt},"Log Payment"))),
+
+    // Budget Editor
+    e(Sheet,{open:sheet?.t==="budget",onClose:()=>sSheet(null),title:"Monthly Budgets"},
+      sheet?.t==="budget"&&(()=>{
+        const groups=S.catGroups||DGRP;
+        const bDef=S.budgets||{};
+        const bOver=(S.budgetOverrides||{})[vm]||{};
+        const isOverride=Object.keys(bOver).length>0;
+        /* Get current effective values for display */
+        const getVal=(gid,subId)=>{
+          const src=isOverride?bOver:bDef;
+          if(subId){return(src[gid]?.subs||{})[subId]||""}
+          return src[gid]?.amount||""};
+        const setVal=(gid,subId,val)=>{
+          const target=isOverride?"budgetOverrides":"budgets";
+          if(isOverride){
+            upd(s=>{const ov={...(s.budgetOverrides||{})};const mo={...(ov[vm]||{})};const g={...(mo[gid]||{amount:0,subs:{}})};
+              if(subId){g.subs={...(g.subs||{})};g.subs[subId]=val}else{g.amount=val}
+              mo[gid]=g;ov[vm]=mo;return{...s,budgetOverrides:ov}})
+          }else{
+            upd(s=>{const b={...(s.budgets||{})};const g={...(b[gid]||{amount:0,subs:{}})};
+              if(subId){g.subs={...(g.subs||{})};g.subs[subId]=val}else{g.amount=val}
+              b[gid]=g;return{...s,budgets:b}})}};
+        return e("div",{style:{display:"flex",flexDirection:"column",gap:12,paddingBottom:20}},
+          /* Override toggle */
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0"}},
+            e("div",null,
+              e("div",{style:{fontSize:13,fontWeight:700}},"Editing: "+MO[parseInt(vm.split("-")[1])-1]+" "+vm.split("-")[0]),
+              e("div",{style:{fontSize:11,color:"#888"}},isOverride?"Custom budget for this month":"Default (applies every month)")),
+            e("button",{className:"pill"+(isOverride?" on":""),onClick:()=>{
+              if(isOverride){
+                if(confirm("Remove override for this month? Will use defaults.")){upd(s=>{const o={...(s.budgetOverrides||{})};delete o[vm];return{...s,budgetOverrides:o}})}
+              }else{
+                /* Copy defaults to override */
+                upd(s=>{const o={...(s.budgetOverrides||{})};o[vm]={...(s.budgets||{})};return{...s,budgetOverrides:o}})
+              }
+            }},isOverride?"Custom":"Default")),
+
+          e("div",{style:{fontSize:11,color:"#888",background:"#f8f9fb",borderRadius:8,padding:8}},
+            isOverride?"Changes only affect "+MO[parseInt(vm.split("-")[1])-1]+". Tap 'Custom' to revert to defaults.":"Changes apply to all months unless you set a custom override."),
+
+          /* Per group inputs */
+          groups.map(g=>e("div",{key:g.id,style:{borderTop:"1px solid #f0f2f5",paddingTop:10}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+              e("span",{style:{fontSize:16}},g.icon),
+              e("span",{style:{fontSize:14,fontWeight:800,flex:1}},g.name),
+              e("input",{className:"inp",type:"number",placeholder:"0",value:getVal(g.id),
+                onChange:ev=>setVal(g.id,null,ev.target.value),
+                style:{width:100,textAlign:"right",padding:"8px 10px",fontSize:13}})),
+            /* Sub-categories */
+            g.subs.length>1&&e("div",{style:{paddingLeft:24}},
+              g.subs.map(sub=>e("div",{key:sub.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:4}},
+                e("span",{style:{fontSize:12,flex:1,color:"#666"}},sub.name),
+                e("input",{className:"inp",type:"number",placeholder:"—",value:getVal(g.id,sub.id),
+                  onChange:ev=>setVal(g.id,sub.id,ev.target.value),
+                  style:{width:80,textAlign:"right",padding:"6px 8px",fontSize:12}})))))),
+
+          e("div",{style:{fontSize:10,color:"#bbb",textAlign:"center"}},"Group budget is the total. Sub-budgets are optional breakdowns within the group."),
+          e("button",{className:"btn btn-p",style:{width:"100%"},onClick:()=>{sSheet(null);flash("Budgets saved!")}},"Done"))
+      })()),
 
     // Toast
     toast&&e("div",{className:"toast-pop"},toast))
